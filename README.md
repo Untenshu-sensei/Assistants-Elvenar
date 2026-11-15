@@ -20,4 +20,4 @@ Que vous soyez débutant ou joueur expérimenté, ces assistants vous aideront �
 
 💡 **Aucune installation nécessaire :** tous les outils fonctionnent directement dans votre navigateur, sur ordinateur comme sur smartphone.
 
-**Conception et développement : Untenshu-sensei**
+**Conception et développement : Untenshu**
