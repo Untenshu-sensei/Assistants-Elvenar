@@ -203,6 +203,7 @@ body{overflow:hidden;touch-action:none;font-family:sans-serif}
 <div id="scenarioStatus"></div>
 <div id="scenarioActions"><button id="btnApplyScenario" disabled>✔ Appliquer ce remaniement</button><button id="btnCopyScenarios" style="background:#8e44ad">📋 Compte rendu à copier</button><button id="btnCloseScenarios">Fermer sans modifier</button></div>
 </div></div>
+<div id="tempBadge" title="Cliquez pour voir la liste" style="display:none;position:fixed;right:8px;bottom:8px;z-index:70;background:#d60000;color:#fff;font-weight:700;font-size:13px;padding:7px 14px;border-radius:16px;border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.6);cursor:pointer"></div>
 <div id="previewBar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:40px;z-index:120;background:#16213e;color:#fff;border:2px solid #3498db;border-radius:10px;padding:8px 12px;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:96vw;box-shadow:0 4px 14px rgba(0,0,0,.55)">
  <span id="previewLabel" style="font-weight:700;font-size:13px"></span>
  <button id="pvBack" style="padding:7px 12px;border:0;border-radius:4px;cursor:pointer;background:#2879a8;color:#fff">↩ Retour aux propositions</button>
@@ -681,6 +682,39 @@ document.getElementById('btnAddExtension').onclick=()=>{
  flash('🧱 Déplace la souris : le cadre vert montre où l\'extension sera posée. Clique pour valider (Échap = annuler).');
  draw();
 };
+/* ---- bâtiments temporaires : échéance (date de départ + durée en heures) ---- */
+function tempInfo(b){
+ if(!b.temp||!b.startDate)return null;
+ const dur=Number(b.duration)||0;if(dur<=0)return null;
+ const t0=Date.parse(b.startDate);if(isNaN(t0))return null;
+ const end=t0+dur*3600000,left=end-Date.now();
+ return {end:end,left:left,expired:left<=0,soon:left>0&&left<=24*3600000};
+}
+function tempList(){
+ const exp=[],soon=[];
+ for(const b of buildings){const ti=tempInfo(b);if(!ti)continue;if(ti.expired)exp.push([b,ti]);else if(ti.soon)soon.push([b,ti])}
+ return {exp:exp,soon:soon};
+}
+function fmtEnd(t){return new Date(t).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function tempReportText(){
+ const L=tempList();let t='BÂTIMENTS TEMPORAIRES\n\n';
+ t+='ARRIVÉS À ÉCHÉANCE ('+L.exp.length+') — croix rouge sur la carte :\n';
+ if(!L.exp.length)t+='  aucun\n';
+ for(const [b,ti] of L.exp)t+='  - '+b.name+' (position '+b.x+','+b.y+') : terminé depuis le '+fmtEnd(ti.end)+'\n';
+ t+='\nBIENTÔT À ÉCHÉANCE, moins de 24 h ('+L.soon.length+') — cadre orange :\n';
+ if(!L.soon.length)t+='  aucun\n';
+ for(const [b,ti] of L.soon)t+='  - '+b.name+' (position '+b.x+','+b.y+') : fin le '+fmtEnd(ti.end)+'\n';
+ return t;
+}
+document.getElementById('tempBadge').onclick=()=>showReport('Bâtiments temporaires',tempReportText());
+const BASE_TITLE=document.title;
+function refreshTempBadge(){
+ const L=tempList(),el=document.getElementById('tempBadge');
+ if(L.exp.length){el.style.display='block';el.textContent='⚠ '+L.exp.length+' bâtiment'+(L.exp.length>1?'s':'')+' temporaire'+(L.exp.length>1?'s':'')+' à échéance — cliquez pour la liste';el.style.background='#d60000';document.title='⚠ ('+L.exp.length+') '+BASE_TITLE}
+ else if(L.soon.length){el.style.display='block';el.textContent='⏳ '+L.soon.length+' bâtiment'+(L.soon.length>1?'s':'')+' temporaire'+(L.soon.length>1?'s':'')+' bientôt à échéance (moins de 24 h)';el.style.background='#d98200';document.title=BASE_TITLE}
+ else{el.style.display='none';document.title=BASE_TITLE}
+}
+setInterval(()=>{draw()},60000);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&extPlacing)stopExtPlacing('Pose de l\'extension annulée.')});
 {
  const _drawBase=draw;
@@ -693,6 +727,23 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&extPlacing)stopExtP
    ctx.setLineDash([]);ctx.fillStyle='#9fd3f7';ctx.font='bold 12px sans-serif';ctx.fillText('Place réservée : prochain portail',offsetX+R.x*scale+6,offsetY+R.y*scale+16);
    ctx.restore();
   }
+  /* croix rouge sur les bâtiments temporaires arrivés à échéance, cadre orange pour ceux qui le seront dans moins de 24 h */
+  for(const b of buildings){
+   const ti=tempInfo(b);if(!ti||(!ti.expired&&!ti.soon))continue;
+   const x=offsetX+b.x*scale,y=offsetY+b.y*scale,w=b.w*scale,h=b.h*scale;
+   ctx.save();
+   if(ti.expired){
+    ctx.fillStyle='rgba(220,0,0,0.30)';ctx.fillRect(x,y,w,h);
+    ctx.lineCap='round';const m=Math.max(3,Math.min(w,h)*0.08);
+    ctx.beginPath();ctx.moveTo(x+m,y+m);ctx.lineTo(x+w-m,y+h-m);ctx.moveTo(x+w-m,y+m);ctx.lineTo(x+m,y+h-m);
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=Math.max(7,Math.min(w,h)*0.22);ctx.stroke();
+    ctx.strokeStyle='#e00000';ctx.lineWidth=Math.max(4,Math.min(w,h)*0.14);ctx.stroke();
+   }else{
+    ctx.setLineDash([6,4]);ctx.strokeStyle='#ff8c00';ctx.lineWidth=3;ctx.strokeRect(x+1,y+1,w-2,h-2);ctx.setLineDash([]);
+   }
+   ctx.restore();
+  }
+  refreshTempBadge();
   if(!extPlacing)return;
   const ok=extCellOk(extPlacing.x,extPlacing.y);
   const sx=offsetX+extPlacing.x*scale,sy=offsetY+extPlacing.y*scale,sz=5*scale;
@@ -1824,7 +1875,5 @@ document.getElementById('optReserveSize').addEventListener('input',()=>{document
 document.getElementById('fFamily').addEventListener('change',()=>{const f=document.getElementById('fFamily').value;if(f===FAM_AUTO)document.getElementById('fRoad').value='false';else if(f===FAM_CULT_RES)document.getElementById('fRoad').value='true'});
 </script>
 <div id="saveBadge" style="display:none;position:fixed;left:8px;bottom:8px;z-index:60;color:#fff;font-size:12px;padding:4px 10px;border-radius:12px;pointer-events:none"></div>
-<script data-goatcounter="https://assistants-elvenar.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js">
 </body>
 </html>
