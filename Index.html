@@ -1,0 +1,131 @@
+from pathlib import Path
+
+html = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Assistants interactifs pour accompagner les joueurs d'Elvenar dans la gestion, l'optimisation et le développement de leur cité.">
+  <title>Assistants Elvenar — Boîte à outils des joueurs</title>
+  <style>
+    :root {
+      --fond: #101827;
+      --panneau: #1b2940;
+      --panneau-survol: #293d5a;
+      --or: #e7c77b;
+      --texte: #f4f0e6;
+      --secondaire: #c4ccda;
+      --bordure: rgba(231, 199, 123, .3);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--texte);
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(ellipse at 50% -10%, #34496a 0, transparent 55%),
+        linear-gradient(160deg, #101827, #17243a 55%, #101827);
+    }
+    .conteneur { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 28px; }
+    header { text-align: center; margin-bottom: 30px; }
+    .surtitre { color: var(--or); font-size: 16px; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 12px 0; color: #f8e7bd; font-size: clamp(2rem, 5vw, 3.3rem); line-height: 1.12; }
+    .accroche { max-width: 760px; margin: 0 auto; color: var(--secondaire); font-size: 1.12rem; line-height: 1.6; }
+    .illustration {
+      display: block; width: 100%; max-height: 370px; object-fit: cover;
+      margin: 28px auto 32px; border: 1px solid var(--bordure);
+      border-radius: 18px; box-shadow: 0 18px 45px rgba(0,0,0,.35);
+    }
+    .introduction { max-width: 820px; margin: 0 auto 34px; color: var(--secondaire); text-align: center; font-size: 1.05rem; line-height: 1.7; }
+    h2 { margin: 0 0 22px; color: var(--or); text-align: center; font-size: 1.8rem; }
+    .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+    .assistant {
+      display: flex; align-items: center; gap: 14px; min-height: 92px; padding: 18px;
+      color: var(--texte); text-decoration: none;
+      background: linear-gradient(145deg, #22334e, var(--panneau));
+      border: 1px solid var(--bordure); border-radius: 14px;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .assistant:hover, .assistant:focus-visible {
+      transform: translateY(-3px); border-color: var(--or); background: var(--panneau-survol); outline: none;
+    }
+    .icone { flex: 0 0 42px; font-size: 30px; text-align: center; }
+    .assistant strong { display: block; color: #f8e7bd; font-size: 1.04rem; }
+    .assistant small { display: block; margin-top: 5px; color: var(--secondaire); font-family: Arial, sans-serif; font-size: .78rem; line-height: 1.4; }
+    .information {
+      max-width: 820px; margin: 30px auto 0; padding: 18px 20px;
+      color: var(--secondaire); text-align: center; line-height: 1.6;
+      border-top: 1px solid var(--bordure); border-bottom: 1px solid var(--bordure);
+    }
+    .information strong, footer strong { color: var(--or); }
+    footer { margin-top: 25px; color: #aeb8c8; text-align: center; font-size: .95rem; }
+    @media (max-width: 560px) {
+      .conteneur { padding-top: 28px; }
+      .illustration { max-height: 230px; }
+      .grille { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="conteneur">
+    <header>
+      <div class="surtitre">🏰 Boîte à outils des joueurs</div>
+      <h1>Assistants Elvenar</h1>
+      <p class="accroche">Des outils interactifs pour mieux gérer, comprendre et développer votre cité.</p>
+    </header>
+
+    <img class="illustration" src="Assistants-Elvenar.png" alt="Illustration des assistants Elvenar">
+
+    <p class="introduction">
+      Bienvenue dans <strong>Assistants Elvenar</strong> ! Que vous soyez débutant ou joueur expérimenté,
+      retrouvez ici plusieurs assistants conçus pour vous aider à prendre vos décisions,
+      anticiper vos besoins et optimiser votre progression.
+    </p>
+
+    <h2>Les assistants disponibles</h2>
+    <section class="grille" aria-label="Liste des assistants">
+      <a class="assistant" href="Optimiseur_Cit%C3%A9.html">
+        <span class="icone">📐</span>
+        <span><strong>Optimiseur de Cité</strong><small>Organisation et implantation de la cité</small></span>
+      </a>
+      <a class="assistant" href="Academie.html">
+        <span class="icone">🧪</span>
+        <span><strong>Académie</strong><small>Assistant dédié à l'Académie</small></span>
+      </a>
+      <a class="assistant" href="Artisanat.html">
+        <span class="icone">🔨</span>
+        <span><strong>Artisanat</strong><small>Outils liés à l'artisanat</small></span>
+      </a>
+      <a class="assistant" href="Assistant%20Strat%C3%A9gique%20%26%20Directif.html">
+        <span class="icone">👑</span>
+        <span><strong>Assistant Stratégique &amp; Orientation</strong><small>Aide à la décision et à l'orientation</small></span>
+      </a>
+      <a class="assistant" href="Module%20Tactique%20Express.html">
+        <span class="icone">⚡</span>
+        <span><strong>Module Tactique Express</strong><small>Préparation tactique rapide</small></span>
+      </a>
+      <a class="assistant" href="Negociation.html">
+        <span class="icone">🤝</span>
+        <span><strong>Assistant Négociations</strong><small>Accompagnement des négociations</small></span>
+      </a>
+      <a class="assistant" href="Combats.html">
+        <span class="icone">⚔️</span>
+        <span><strong>Assistant Combats</strong><small>Préparation et aide aux combats</small></span>
+      </a>
+    </section>
+
+    <div class="information">
+      💡 <strong>Aucune installation nécessaire :</strong> tous les outils fonctionnent directement
+      dans votre navigateur, sur ordinateur comme sur smartphone.
+    </div>
+
+    <footer>Conception et développement : <strong>Untenshu</strong></footer>
+  </main>
+</body>
+</html>
+"""
+
+path = Path("/mnt/data/index_html_a_renommer_en_index.txt")
+path.write_text(html, encoding="utf-8", newline="\n")
+print(f"Fichier créé : {path} ({path.stat().st_size:,} octets)")
