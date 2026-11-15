@@ -1,6 +1,8 @@
+from pathlib import Path
 
 
-\# 🏰 Assistants Elvenar — Boîte à outils des joueurs
+
+content = """# 🏰 Assistants Elvenar — Boîte à outils des joueurs
 
 
 
@@ -49,6 +51,14 @@ Que vous soyez débutant ou joueur expérimenté, ces assistants vous aideront �
 
 
 \*\*Conception et développement : Untenshu\*\*
+
+"""
+
+path = Path("/mnt/data/README.md")
+
+path.write\_text(content, encoding="utf-8", newline="\\n")
+
+print(f"Fichier créé : {path} ({path.stat().st\_size} octets)")
 
 
 
