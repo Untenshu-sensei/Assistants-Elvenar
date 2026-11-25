@@ -2108,8 +2108,10 @@ async function buildGlobalOptimization(onProgress){
   }
  }
  /* un remaniement complet n'est proposé que s'il fait VRAIMENT mieux que l'existant : jamais de bâtiment sans place en plus, jamais plus de rues */
- const meilleurs=results.filter(r=>(r.unservedFixed||0)===0&&r.roadCells.length<=K&&(r.unplaced.length<baseUnplaced||(r.unplaced.length===baseUnplaced&&(r.roadCells.length<K||(P.reserve&&r.reserve&&r.roadCells.length<=K+8&&r.unplaced.length===0)))));
- for(const r of meilleurs){if(scenarios.length>=3)break;r.kind='remaniement';r.baseRues=K;scenarios.push(r)}
+ /* Règle : tout plan qui utilise MOINS de rues que ta cité actuelle est proposé (même s'il fait moins bien que le simple nettoyage) ; c'est au joueur de choisir. */
+ const LIM=roadMovable.length;
+ const meilleurs=results.filter(r=>(r.unservedFixed||0)===0&&r.roadCells.length<LIM&&(r.unplaced.length<baseUnplaced||(r.unplaced.length===baseUnplaced&&(r.roadCells.length<LIM||(P.reserve&&r.reserve&&r.roadCells.length<=LIM&&r.unplaced.length===0)))));
+ for(const r of meilleurs){if(scenarios.length>=5)break;r.kind='remaniement';r.baseRues=K;scenarios.push(r)}
  if(!scenarios.length){
   return {info:"Aucune amélioration trouvée. Ta disposition actuelle est déjà aussi bonne que ce que je sais calculer : toutes tes rues sont utiles ("+roadMovable.length+") et aucun plan complet ne fait mieux sans laisser de bâtiment sans place. Rien n'a été modifié.",notes:notes,scenarios:[]};
  }
@@ -2205,7 +2207,7 @@ function showOptimizationScenarios(result){
   if(sc.kind==='nettoyage'){t='Rues actuelles : '+sc.roadTilesAvailable+' → utiles : '+sc.roadTilesNeeded+' ('+sc.removed+' rue(s) inutile(s) retirée(s), mises en stock à droite de la carte).\nAucun bâtiment ne bouge. Cases libres : '+sc.freeBefore+' → '+sc.freeAfter+' (+'+sc.removed+').'}
   else{
   t='Rues actuelles : '+sc.roadTilesAvailable+(sc.baseRues!==undefined?' (utiles : '+sc.baseRues+')':'')+'\nRues dans ce plan : '+sc.roadTilesNeeded+'';
-  t+=ecart>0?' → '+ecart+' rue(s) économisée(s), mises en stock à droite de la carte.':(ecart===0?' → autant que maintenant.':' → ⚠ '+(-ecart)+' rue(s) de PLUS que maintenant : plan moins bon.');
+  t+=ecart>0?' → '+ecart+' rue(s) économisée(s), mises en stock à droite de la carte.'+((sc.kind==='remaniement'&&!sc.local&&sc.baseRues&&sc.roadTilesNeeded>sc.baseRues)?' Attention : moins économe que le simple nettoyage ('+sc.baseRues+' rues), mais cette disposition change l\'organisation de la cité : à vous de choisir.':''):(ecart===0?' → autant que maintenant.':' → ⚠ '+(-ecart)+' rue(s) de PLUS que maintenant : plan moins bon.');
   if(sc.ensemble){const re=sc.railTilesAvailable-sc.railTilesNeeded;t+='\nEnsemble du portail : '+sc.railTilesNeeded+' rail(s) utilisé(s) sur '+sc.railTilesAvailable+(re>=0?' ('+re+' en stock à droite de la carte).':' → il faudra en construire '+(-re)+' de plus.')}
   if(sc.reserveAsked)t+=sc.reserve?'\nPlace réservée pour le prochain portail : '+sc.reserve.w+'×'+sc.reserve.h+' cases libres (cadre bleu sur la carte).':'\n⚠ Impossible de garder une place libre de cette taille dans ce plan.';
   t+='\nCases libres dans la cité : '+sc.freeBefore+' avant → '+sc.freeAfter+' après ('+(gain>=0?'+':'')+gain+').';
