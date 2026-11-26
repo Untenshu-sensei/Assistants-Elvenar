@@ -91,6 +91,7 @@ body{overflow:hidden;touch-action:none;font-family:sans-serif}
 <label class="chk"><input type="checkbox" id="chkNext" checked> Niv. suivant</label>
 <label class="chk"><input type="checkbox" id="chkHide" checked> Masquer non conf.</label>
 <label class="chk"><input type="checkbox" id="chkLabels" checked> Noms</label>
+<label class="chk" title="Petit triangle blanc dans le coin d'un bâtiment qui n'a pas besoin d'être relié à une rue : il peut être placé n'importe où."><input type="checkbox" id="chkFree" checked> ◥ Sans rue</label>
 <span class="stat" id="stats"></span>
 </div>
 <div id="list">
@@ -369,7 +370,7 @@ function buildPlanSnapshot(){
 const TYPES_KEY='elvenar_planner_types_v1.3';
 /* FICHES INTÉGRÉES : les fiches déjà renseignées (rue pavée, route pavée, rail, etc.) sont écrites DANS le fichier.
    Elles servent de secours quand la mémoire du navigateur est vide ou différente (autre copie du fichier, mémoire effacée). */
-const EMBEDDED_FICHES={"A_Elves_Premium_Boardwalk_1":{"name":"Promenade de l'harmonie","family":"Culture (/Résidentiel) Autonome","w":1,"h":2,"nextW":1,"nextH":2,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"A_Elves_Crop_1":{"name":"Récolte de la joie","family":"Culture (/Résidentiel) Autonome","w":1,"h":2,"nextW":1,"nextH":2,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"A_Elves_Temple_1":{"name":"Temple des âges","family":"Culture (/Résidentiel) Autonome","w":5,"h":4,"nextW":5,"nextH":4,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"A_Evt_Winter_2Crystal_6":{"name":"Flamme orange gelée","family":"Culture (/Résidentiel) Autonome","w":2,"h":2,"nextW":1,"nextH":1,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":6,"sizes":{}},"A_Elves_Premium_Tower_1":{"name":"Tour de la torche d'or","family":"Culture","w":3,"h":3,"nextW":3,"nextH":3,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"A_Dwarfs_Grove_1":{"name":"Havre du voyageur","family":"Culture (/Résidentiel) Autonome","w":1,"h":4,"nextW":1,"nextH":1,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{"1":{"w":1,"h":4}}},"A_Evt_UnicornSilver_4":{"name":"Licorne d'argent","family":"Culture","w":2,"h":1,"nextW":2,"nextH":1,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":4,"sizes":{}},"A_Elves_Premium_Stairway_1":{"name":"Excalier du vent","family":"Culture","w":1,"h":3,"nextW":1,"nextH":3,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"A_Elves_Premium_Seasnake_1":{"name":"Serpent de mer vallorien","family":"Culture (/Résidentiel) Autonome","w":3,"h":4,"nextW":3,"nextH":4,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"A_Evt_Spire_Set_A_Endless_Scroll_3":{"name":"Parchemin infini","family":"Culture","w":2,"h":1,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":3,"sizes":{}},"A_Evt_Theater_Zodiac_XXV_Phantoms_Rest_6":{"name":"Repos du fantôme","family":"Culture","w":2,"h":3,"nextW":2,"nextH":3,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":6,"sizes":{}},"A_Evt_MPE_Trophy_Three_6":{"name":"Grand monument de la postérité","family":"Culture (/Résidentiel) Autonome","w":2,"h":2,"nextW":1,"nextH":1,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":6,"sizes":{}},"A_Evt_Evo_Theater_Zodiac_XXVI_Veloria_The_Painted_Starwing_6":{"name":"Veloria l'aile étoilée peinte","family":"Culture","w":3,"h":3,"nextW":3,"nextH":3,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":6,"sizes":{}},"A_Evt_Evo_February_XXI_Everblossom_Sleigh_4":{"name":"Traineau de l'éternelle floraison","family":"Culture (/Résidentiel)","w":4,"h":4,"nextW":4,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":4,"sizes":{}},"A_Elves_Premium_Fertility_1":{"name":"Désse de la fertilité","family":"Culture","w":3,"h":3,"nextW":3,"nextH":3,"needsRoad":false,"temp":false,"duration":5,"startDate":"","locked":false,"level":1,"sizes":{}},"G_Elves_FactoryPaper_14":{"name":"Manufacture de parchemins","family":"Marchandises","w":4,"h":4,"nextW":4,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":14,"sizes":{}},"B_Dwarfs_Mine_4":{"name":"Mine de granit","family":"Portail / Marchandises","w":3,"h":2,"nextW":3,"nextH":2,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":4,"sizes":{"4":{"w":3,"h":2}}},"G_Elves_FactoryWood_15":{"name":"Manufacture de planches","family":"Marchandises","w":3,"h":2,"nextW":3,"nextH":2,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":15,"sizes":{}},"G_Elves_FactoryMagic_10":{"name":"Manufacture de poussière magique","family":"Marchandises","w":5,"h":4,"nextW":5,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":10,"sizes":{}},"B_Dwarfs_Mine_2":{"name":"Mine de granit","family":"Marchandises","w":3,"h":2,"nextW":3,"nextH":2,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":2,"sizes":{}},"G_Elves_FactoryWood_16":{"name":"Manufacture de planches","family":"Marchandises","w":5,"h":2,"nextW":5,"nextH":2,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":16,"sizes":{}},"M_Orcs_Barracks_8":{"name":"Terrain d'entraînement","family":"Militaire","w":3,"h":4,"nextW":3,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":8,"sizes":{}},"M_Elves_Barracks_17":{"name":"Caserne","family":"Militaire","w":4,"h":8,"nextW":4,"nextH":8,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":17,"sizes":{}},"O_Elves_Armory_15":{"name":"Armurerie","family":"Militaire","w":4,"h":4,"nextW":4,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":15,"sizes":{}},"O_Elves_Armory_4":{"name":"Armurerie","family":"Militaire","w":2,"h":2,"nextW":4,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":4,"sizes":{"4":{"w":2,"h":2}}},"P_Elves_Workshop_15":{"name":"Atelier","family":"Marchandises","w":4,"h":3,"nextW":4,"nextH":3,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":15,"sizes":{}},"R_Elves_Residential_17":{"name":"Résidence","family":"Résidence","w":2,"h":4,"nextW":2,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":17,"sizes":{}},"S_Dwarfs_Tracks":{"name":"Rail","family":"Chemin d'ensemble","w":1,"h":1,"nextW":1,"nextH":1,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"S_Elves_Road":{"name":"Route pavée","family":"Rue","w":1,"h":1,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{"1":{"w":1,"h":1}}},"S_Elves_Street":{"name":"Rue pavée","family":"Rue","w":1,"h":1,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{"1":{"w":1,"h":1}}},"B_Dwarfs_Portal_4":{"name":"Portail des nains","family":"Portail/règlement","w":5,"h":5,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":4,"sizes":{"4":{"w":5,"h":5}}},"Y_Elves_Trader_1":{"name":"Marchand","family":"Basique","w":3,"h":4,"nextW":3,"nextH":4,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"Z_Elves_WorkerHut_3":{"name":"Cabane des bâtisseurs","family":"Basique","w":3,"h":3,"nextW":3,"nextH":3,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":3,"sizes":{}},"B_All_AW4_5":{"name":"Aiguilles de la tempête","family":"Merveille Antique","w":3,"h":5,"nextW":3,"nextH":5,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":5,"sizes":{}},"B_Elves_AW2_5":{"name":"Phare de cristal","family":"Merveille Antique","w":6,"h":4,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":5,"sizes":{}},"B_Elves_AW1_5":{"name":"Monastère martial","family":"Merveille Antique","w":5,"h":5,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":5,"sizes":{}},"A_Evt_Expiring_RefundTech_3":{"name":"Bibliothèque itinérante","family":"Culture","w":2,"h":1,"nextW":2,"nextH":1,"needsRoad":true,"temp":true,"duration":1032,"startDate":"2026-11-09T07:16","locked":false,"level":3,"sizes":{}},"A_Evt_Exp_Theater_Yulecat_XXVI_Little_Leaf_Pier_6":{"name":"Petit ponton des feuilles","family":"Culture (/Résidentiel)","w":2,"h":4,"nextW":2,"nextH":4,"needsRoad":true,"temp":false,"duration":360,"startDate":"2026-11-09T07:17","locked":false,"level":6,"sizes":{"6":{"w":2,"h":4}}},"A_Evt_May_XXII_Decorative_Flower_A_5":{"name":"Champ de bégonias rouges","family":"Culture","w":1,"h":1,"nextW":1,"nextH":1,"needsRoad":true,"temp":true,"duration":696,"startDate":"2026-11-09T07:14","locked":false,"level":5,"sizes":{}},"A_Evt_Djinn_5":{"name":"Génie","family":"Culture (/Résidentiel)","w":4,"h":3,"nextW":4,"nextH":3,"needsRoad":true,"temp":true,"duration":1475,"startDate":"2026-11-15T07:15","locked":false,"level":5,"sizes":{}},"A_Evt_May_XXII_Decorative_Flower_E_6":{"name":"Champ d'amaryllis rouges","family":"Culture (/Résidentiel) Autonome","w":1,"h":1,"nextW":1,"nextH":1,"needsRoad":false,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{"1":{"w":1,"h":1}}},"A_Evt_May_XXII_Decorative_Flower_D_5":{"name":"Pierres de jardin","family":"Culture","w":1,"h":1,"nextW":1,"nextH":1,"needsRoad":false,"temp":true,"duration":744,"startDate":"2026-11-09T07:15","locked":false,"level":5,"sizes":{}},"B_All_Guardian_Grove_1":{"name":"Sanctuaire des gardiens","family":"Donjon","w":1,"h":1,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}},"R_Elves_Residential_1":{"name":"Résidence","family":"Résidence","w":2,"h":2,"nextW":1,"nextH":1,"needsRoad":true,"temp":false,"duration":0,"startDate":"","locked":false,"level":1,"sizes":{}}};
+const EMBEDDED_FICHES={"A_Elves_Premium_Boardwalk_1":{"name":"Promenade de l'harmonie","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":1,"h":2,"nextW":1,"nextH":2,"sizes":{},"level":1},"A_Elves_Crop_1":{"name":"Récolte de la joie","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":1,"h":2,"nextW":1,"nextH":2,"sizes":{},"level":1},"A_Elves_Temple_1":{"name":"Temple des âges","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":5,"h":4,"nextW":5,"nextH":4,"sizes":{},"level":1},"A_Evt_Winter_2Crystal_6":{"name":"Flamme orange gelée","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":2,"h":2,"nextW":1,"nextH":1,"sizes":{},"level":6},"A_Elves_Premium_Tower_1":{"name":"Tour de la torche d'or","family":"Culture","needsRoad":false,"w":3,"h":3,"nextW":3,"nextH":3,"sizes":{},"level":1},"A_Dwarfs_Grove_1":{"name":"Havre du voyageur","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":1,"h":4,"nextW":1,"nextH":1,"sizes":{"1":{"w":1,"h":4}},"level":1},"A_Evt_UnicornSilver_4":{"name":"Licorne d'argent","family":"Culture","needsRoad":false,"w":2,"h":1,"nextW":2,"nextH":1,"sizes":{},"level":4},"A_Elves_Premium_Stairway_1":{"name":"Excalier du vent","family":"Culture","needsRoad":false,"w":1,"h":3,"nextW":1,"nextH":3,"sizes":{},"level":1},"A_Elves_Premium_Seasnake_1":{"name":"Serpent de mer vallorien","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":3,"h":4,"nextW":3,"nextH":4,"sizes":{},"level":1},"A_Evt_Spire_Set_A_Endless_Scroll_3":{"name":"Parchemin infini","family":"Culture","needsRoad":true,"w":2,"h":1,"nextW":1,"nextH":1,"sizes":{},"level":3},"A_Evt_Theater_Zodiac_XXV_Phantoms_Rest_6":{"name":"Repos du fantôme","family":"Culture","needsRoad":true,"w":2,"h":3,"nextW":2,"nextH":3,"sizes":{},"level":6},"A_Evt_MPE_Trophy_Three_6":{"name":"Grand monument de la postérité","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":2,"h":2,"nextW":1,"nextH":1,"sizes":{},"level":6},"A_Evt_Evo_Theater_Zodiac_XXVI_Veloria_The_Painted_Starwing_6":{"name":"Veloria l'aile étoilée peinte","family":"Culture","needsRoad":true,"w":3,"h":3,"nextW":3,"nextH":3,"sizes":{},"level":6},"A_Evt_Evo_February_XXI_Everblossom_Sleigh_4":{"name":"Traineau de l'éternelle floraison","family":"Culture (/Résidentiel)","needsRoad":true,"w":4,"h":4,"nextW":4,"nextH":4,"sizes":{},"level":4},"A_Elves_Premium_Fertility_1":{"name":"Désse de la fertilité","family":"Culture","needsRoad":false,"w":3,"h":3,"nextW":3,"nextH":3,"sizes":{},"level":1},"G_Elves_FactoryPaper_14":{"name":"Manufacture de parchemins","family":"Marchandises","needsRoad":true,"w":4,"h":4,"nextW":4,"nextH":4,"sizes":{},"level":14},"B_Dwarfs_Mine_4":{"name":"Mine de granit","family":"Portail / Marchandises","needsRoad":false,"w":3,"h":2,"nextW":3,"nextH":2,"sizes":{"4":{"w":3,"h":2}},"level":4},"G_Elves_FactoryWood_15":{"name":"Manufacture de planches","family":"Marchandises","needsRoad":true,"w":3,"h":2,"nextW":3,"nextH":2,"sizes":{},"level":15},"G_Elves_FactoryMagic_10":{"name":"Manufacture de poussière magique","family":"Marchandises","needsRoad":true,"w":5,"h":4,"nextW":5,"nextH":4,"sizes":{},"level":10},"B_Dwarfs_Mine_2":{"name":"Mine de granit","family":"Marchandises","needsRoad":true,"w":3,"h":2,"nextW":3,"nextH":2,"sizes":{},"level":2},"G_Elves_FactoryWood_16":{"name":"Manufacture de planches","family":"Marchandises","needsRoad":true,"w":5,"h":2,"nextW":5,"nextH":2,"sizes":{},"level":16},"M_Orcs_Barracks_8":{"name":"Terrain d'entraînement","family":"Militaire","needsRoad":true,"w":3,"h":4,"nextW":3,"nextH":4,"sizes":{},"level":8},"M_Elves_Barracks_17":{"name":"Caserne","family":"Militaire","needsRoad":true,"w":4,"h":8,"nextW":4,"nextH":8,"sizes":{},"level":17},"O_Elves_Armory_15":{"name":"Armurerie","family":"Militaire","needsRoad":true,"w":4,"h":4,"nextW":4,"nextH":4,"sizes":{},"level":15},"O_Elves_Armory_4":{"name":"Armurerie","family":"Militaire","needsRoad":true,"w":2,"h":2,"nextW":4,"nextH":4,"sizes":{"4":{"w":2,"h":2}},"level":4},"P_Elves_Workshop_15":{"name":"Atelier","family":"Marchandises","needsRoad":true,"w":4,"h":3,"nextW":4,"nextH":3,"sizes":{},"level":15},"R_Elves_Residential_17":{"name":"Résidence","family":"Résidence","needsRoad":true,"w":2,"h":4,"nextW":2,"nextH":4,"sizes":{},"level":17},"S_Dwarfs_Tracks":{"name":"Rail","family":"Chemin d'ensemble","needsRoad":false,"w":1,"h":1,"nextW":1,"nextH":1,"sizes":{},"level":1},"S_Elves_Road":{"name":"Route pavée","family":"Rue","needsRoad":true,"w":1,"h":1,"nextW":1,"nextH":1,"sizes":{"1":{"w":1,"h":1}},"level":1},"S_Elves_Street":{"name":"Rue pavée","family":"Rue","needsRoad":true,"w":1,"h":1,"nextW":1,"nextH":1,"sizes":{"1":{"w":1,"h":1}},"level":1},"B_Dwarfs_Portal_4":{"name":"Portail des nains","family":"Portail/règlement","needsRoad":true,"w":5,"h":5,"nextW":1,"nextH":1,"sizes":{"4":{"w":5,"h":5}},"level":4},"Y_Elves_Trader_1":{"name":"Marchand","family":"Basique","needsRoad":true,"w":3,"h":4,"nextW":3,"nextH":4,"sizes":{},"level":1},"Z_Elves_WorkerHut_3":{"name":"Cabane des bâtisseurs","family":"Basique","needsRoad":true,"w":3,"h":3,"nextW":3,"nextH":3,"sizes":{},"level":3},"B_All_AW4_5":{"name":"Aiguilles de la tempête","family":"Merveille Antique","needsRoad":true,"w":3,"h":5,"nextW":3,"nextH":5,"sizes":{},"level":5},"B_Elves_AW2_5":{"name":"Phare de cristal","family":"Merveille Antique","needsRoad":true,"w":6,"h":4,"nextW":1,"nextH":1,"sizes":{},"level":5},"B_Elves_AW1_5":{"name":"Monastère martial","family":"Merveille Antique","needsRoad":true,"w":5,"h":5,"nextW":1,"nextH":1,"sizes":{},"level":5},"A_Evt_Expiring_RefundTech_3":{"name":"Bibliothèque itinérante","family":"Culture","needsRoad":true,"w":2,"h":1,"nextW":2,"nextH":1,"sizes":{},"level":3},"A_Evt_Exp_Theater_Yulecat_XXVI_Little_Leaf_Pier_6":{"name":"Petit ponton des feuilles","family":"Culture (/Résidentiel)","needsRoad":true,"w":2,"h":4,"nextW":2,"nextH":4,"sizes":{"6":{"w":2,"h":4}},"level":6},"A_Evt_May_XXII_Decorative_Flower_A_5":{"name":"Champ de bégonias rouges","family":"Culture","needsRoad":true,"w":1,"h":1,"nextW":1,"nextH":1,"sizes":{},"level":5},"A_Evt_Djinn_5":{"name":"Génie","family":"Culture (/Résidentiel)","needsRoad":true,"w":4,"h":3,"nextW":4,"nextH":3,"sizes":{},"level":5},"A_Evt_May_XXII_Decorative_Flower_E_6":{"name":"Champ d'amaryllis rouges","family":"Culture (/Résidentiel) Autonome","needsRoad":false,"w":1,"h":1,"nextW":1,"nextH":1,"sizes":{"1":{"w":1,"h":1}},"level":1},"A_Evt_May_XXII_Decorative_Flower_D_5":{"name":"Pierres de jardin","family":"Culture","needsRoad":false,"w":1,"h":1,"nextW":1,"nextH":1,"sizes":{},"level":5},"B_All_Guardian_Grove_1":{"name":"Sanctuaire des gardiens","family":"Donjon","needsRoad":true,"w":1,"h":1,"nextW":1,"nextH":1,"sizes":{},"level":1},"R_Elves_Residential_1":{"name":"Résidence","family":"Résidence","needsRoad":true,"w":2,"h":2,"nextW":1,"nextH":1,"sizes":{},"level":1}};
 function readTypeMemory(){let st={};try{st=JSON.parse(localStorage.getItem(TYPES_KEY)||'{}')||{}}catch(e){st={}}return Object.assign({},EMBEDDED_FICHES,st)}
 function writeTypeMemory(){
  try{const mem=readTypeMemory();
@@ -396,8 +397,8 @@ function autoConfigStreets(){for(const k in types){const t=types[k];if(t.configu
 function applyTypeMemory(){
  const mem=readTypeMemory();
  for(const k in mem){if(!types[k]||types[k].configured)continue;const t=types[k],v=mem[k];
-  t.name=v.name;t.family=v.family||'';t.w=v.w;t.h=v.h;t.nextW=v.nextW;t.nextH=v.nextH;t.needsRoad=v.needsRoad;t.temp=v.temp;t.duration=v.duration;t.startDate=v.startDate||'';t.locked=v.locked||false;if(v.level!==undefined)t.level=Number(v.level);t.sizes=v.sizes||{};t.configured=true;
-  for(const b of buildings){if(b.entityId===k){const sz=(v.sizes&&v.sizes[b.level])||null;b.w=sz?sz.w:v.w;b.h=sz?sz.h:v.h;b.nextW=v.nextW;b.nextH=v.nextH;b.name=v.name;b.family=v.family||'';b.needsRoad=v.needsRoad;b.temp=v.temp;b.duration=v.duration;b.startDate=v.startDate||'';b.locked=v.locked||false;b.color=colorForBuilding(b)}}}
+  t.name=v.name;t.family=v.family||'';t.w=v.w;t.h=v.h;t.nextW=v.nextW;t.nextH=v.nextH;t.needsRoad=v.needsRoad;if('temp' in v)t.temp=v.temp;if('duration' in v)t.duration=v.duration;if('startDate' in v)t.startDate=v.startDate||'';if('locked' in v)t.locked=v.locked||false;if(v.level!==undefined)t.level=Number(v.level);t.sizes=v.sizes||{};t.configured=true;
+  for(const b of buildings){if(b.entityId===k){const sz=(v.sizes&&v.sizes[b.level])||null;b.w=sz?sz.w:v.w;b.h=sz?sz.h:v.h;b.nextW=v.nextW;b.nextH=v.nextH;b.name=v.name;b.family=v.family||'';b.needsRoad=v.needsRoad;if('temp' in v)b.temp=v.temp;if('duration' in v)b.duration=v.duration;if('startDate' in v)b.startDate=v.startDate||'';if('locked' in v)b.locked=v.locked||false;b.color=colorForBuilding(b)}}}
 }
 
 let saveWarned=false;
@@ -527,6 +528,8 @@ function loadCity(data,savedConfigs,savedPositions,savedRoadList,savedAreas,save
  if(savedConfigs){for(const k in savedConfigs){if(types[k]){const t=types[k],d=savedConfigs[k];t.name=d.name;t.family=d.family||'';t.w=d.w;t.h=d.h;t.nextW=d.nextW;t.nextH=d.nextH;t.needsRoad=d.needsRoad;t.temp=d.temp;t.duration=d.duration;t.startDate=d.startDate||'';t.locked=d.locked||false;t.sizes=d.sizes||{};if(d.level!==undefined)t.level=Number(d.level);t.configured=true;for(const b of buildings){if(b.entityId===k){const sz=(d.sizes&&d.sizes[b.level])||null;b.w=sz?sz.w:d.w;b.h=sz?sz.h:d.h;b.name=d.name;b.family=d.family||'';b.locked=d.locked||false;b.color=colorForBuilding(b)}}}}}
  applyTypeMemory();
  autoConfigStreets();
+ /* un bâtiment ajouté à la main n'est une « rue/chemin » que si sa catégorie le dit (sinon son nom n'était pas affiché et l'optimiseur le prenait pour une rue) */
+ for(const b of buildings)if(b.type==='custom')b.isRoad=(familyOf(b)==='Rue'||familyOf(b)===CHEMIN);
  if(savedPositions){for(const p of savedPositions){const b=buildings.find(b=>b.id===p.id);if(b){b.x=p.x;b.y=p.y;if(p.level!==undefined)b.level=Number(p.level);if(p.w!==undefined&&p.h!==undefined){b.w=Number(p.w)||b.w;b.h=Number(p.h)||b.h}if(p.locked!==undefined)b.locked=!!p.locked;if(p.temp!==undefined)b.temp=!!p.temp;if(p.duration!==undefined)b.duration=Number(p.duration)||0;if(p.startDate!==undefined)b.startDate=p.startDate||'';b.color=colorForBuilding(b);}}}
 
  if(Array.isArray(savedRemoved)&&savedRemoved.length){const rm=new Set(savedRemoved.map(String));buildings=buildings.filter(b=>!rm.has(String(b.id)))}
@@ -619,7 +622,7 @@ document.getElementById('btnSaveType').onclick=()=>{
  const all=document.getElementById('fApplyAll').checked;
  const same=buildings.filter(b=>b.entityId===selectedType);
  const cible=all?same:[(selectedBuilding&&selectedBuilding.entityId===selectedType)?selectedBuilding:same[0]].filter(Boolean);
- for(const b of same){b.name=t.name;b.family=t.family;b.needsRoad=t.needsRoad;b.color=colorForBuilding(b)}
+ for(const b of same){b.name=t.name;b.family=t.family;b.needsRoad=t.needsRoad;if(b.type==='custom')b.isRoad=(b.family==='Rue'||b.family===CHEMIN);b.color=colorForBuilding(b)}
  for(const b of cible){b.level=nl;b.locked=lk;b.w=w;b.h=h;b.temp=tp;b.startDate=sd;b.duration=du;b.color=colorForBuilding(b)}
  // la taille d'un niveau est retenue : un nouvel import redonne la bonne taille à chaque niveau
  t.sizes=t.sizes||{};t.sizes[nl]={w:w,h:h};
@@ -891,7 +894,7 @@ document.getElementById('btnPanel').onclick=()=>{
  if(panel.style.display==='block'){panel.style.display='none';return}
  if(selectedType)openPanel(selectedType);else alert("Clique d'abord sur un bâtiment.");
 };
-['chkLabels','chkHide','chkNext'].forEach(id=>document.getElementById(id).addEventListener('change',draw));
+['chkLabels','chkFree','chkHide','chkNext'].forEach(id=>document.getElementById(id).addEventListener('change',draw));
 document.getElementById('selMode').addEventListener('change',onModeChange);
 
 document.getElementById('btnOriginal').onclick=()=>{
@@ -994,6 +997,55 @@ function updateStats(){
 }
 
 /* ---------- DESSIN ---------- */
+/* Nom du bâtiment dans sa case : la police s'adapte à la taille, le nom passe sur plusieurs lignes si besoin. Le niveau n'est ajouté que s'il reste de la place. */
+/* Bâtiments qui n'ont PAS besoin d'une rue (et qu'on peut donc poser n'importe où) : repérés par un petit triangle blanc dans le coin haut droit.
+   Ne sont pas concernés : rues/rails, bâtiments verrouillés, Hôtel de Ville, portail, mines et fonderies (reliés par rail). */
+function isSatBuilding(b){return FAMS_RAIL.includes(familyOf(b))||(/mine de granit|fonderie de cuivre/i.test(String(b.name||''))&&familyOf(b)!==FAM_PORTAIL)}
+function noRoadNeeded(b){
+ if(isRoadForOptim(b)||b.type==='guardian'||b.locked||isImmutable(b)||isSatBuilding(b))return false;
+ const f=familyOf(b);if(f===FAM_PORTAIL||f==='Donjon')return false;
+ return !((b.needsRoad||f===FAM_CULT_RES)&&f!==FAM_AUTO);
+}
+function drawFreeMark(sx,sy,sw,sh){
+ const t=Math.max(5,Math.min(9,sw/3,sh/3));
+ ctx.save();ctx.beginPath();ctx.moveTo(sx+sw-t,sy);ctx.lineTo(sx+sw,sy);ctx.lineTo(sx+sw,sy+t);ctx.closePath();
+ ctx.fillStyle='#ffffff';ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(0,0,0,0.75)';ctx.stroke();ctx.restore();
+}
+let wrapCut=false;
+function wrapName(text,maxW){wrapCut=false;const words=String(text||'').split(/\s+/).filter(Boolean);const lines=[];let cur='';
+ for(let w of words){
+  while(ctx.measureText(w).width>maxW&&w.length>1){wrapCut=true;let k=w.length;while(k>1&&ctx.measureText(w.slice(0,k)).width>maxW)k--;if(cur){lines.push(cur);cur=''}lines.push(w.slice(0,k));w=w.slice(k)}
+  const test=cur?cur+' '+w:w;
+  if(ctx.measureText(test).width<=maxW)cur=test;else{if(cur)lines.push(cur);cur=w}
+ }
+ if(cur)lines.push(cur);return lines}
+/* Abréviations : utilisées seulement si le nom complet ne tient pas dans la case (le nom entier reste visible au survol de la souris). */
+const ABREV_MOTS={'manufacture':'Manuf.','résidence':'Rés.','residence':'Rés.','bibliothèque':'Biblio.','académie':'Acad.','fonderie':'Fond.','monastère':'Mon.','entraînement':'entr.','entrainement':'entr.','bâtisseurs':'bâtis.','armurerie':'Armur.','poussière':'pouss.','parchemins':'parch.','merveille':'Merv.','sorcellerie':'Sorc.','bénédiction':'Bénéd.','invocation':'Invoc.','magique':'mag.','étincelante':'étinc.','éternelle':'étern.','portail':'Port.','marchand':'March.','caserne':'Cas.','temple':'Temp.','atelier':'Atel.'};
+const MOTS_VIDES=new Set(['de','du','des','la','le','les','l','d','et','aux','au','un','une']);
+function abrevNom(name,fort){
+ let mots=String(name||'').replace(/[’']/g,' ').split(/\s+/).filter(Boolean);
+ const garde=mots.filter((m,i)=>i===0||!MOTS_VIDES.has(m.toLowerCase()));
+ mots=(garde.length?garde:mots).map(m=>ABREV_MOTS[m.toLowerCase()]||m);
+ if(fort)mots=mots.map(m=>m.length>6&&!/\.$/.test(m)?m.slice(0,4)+'.':m);
+ return mots.join(' ');
+}
+function drawNameInBox(b,sx,sy,sw,sh){
+ const full=String(b.name||b.entityId||'?'),pad=2;
+ ctx.save();ctx.beginPath();ctx.rect(sx,sy,sw,sh);ctx.clip();ctx.textAlign='left';ctx.textBaseline='alphabetic';
+ const ab1=abrevNom(full,false),ab2=abrevNom(full,true);
+ const essais=[[full,8],[ab1,8],[full,7],[ab1,7],[ab1,6],[ab2,6]];   // ordre : lisible d'abord, de plus en plus court ensuite
+ let fs=6,lines=[],ok=false;
+ for(const e of essais){
+  for(let f=10;f>=e[1];f--){ctx.font=f+'px sans-serif';const L=wrapName(e[0],sw-2*pad);if(!wrapCut&&L.length*(f+1)+pad<=sh){fs=f;lines=L;ok=true;break}}   // wrapCut : refusé si un mot doit être coupé en deux
+  if(ok)break;
+ }
+ if(!ok){fs=6;ctx.font='6px sans-serif';lines=wrapName(abrevNom(full,true),sw-2*pad)}
+ ctx.fillStyle='rgba(0,0,0,0.7)';
+ lines.forEach((ln,i)=>ctx.fillText(ln,sx+pad,sy+pad+(fs+1)*(i+1)-1));
+ const used=lines.length*(fs+1)+pad;
+ if(b.level&&fs>=8&&sh-used>=fs+2){ctx.font=Math.max(6,fs-1)+'px sans-serif';ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillText('Niv. '+b.level,sx+pad,sy+sh-3)}
+ ctx.restore();
+}
 function draw(){
  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
  ctx.save();ctx.translate(offsetX,offsetY);ctx.scale(scale,scale);
@@ -1028,20 +1080,15 @@ function draw(){
  ctx.restore();
 
  const showLabels=document.getElementById('chkLabels').checked;
+ const showFree=document.getElementById('chkFree').checked;
  for(const b of buildings){
   const sx=offsetX+b.x*scale,sy=offsetY+b.y*scale,sw=b.w*scale,sh=b.h*scale;
   if(sx>canvas.width||sy>canvas.height||sx+sw<0||sy+sh<0)continue;
   if(b.locked&&sw>=14){ctx.fillStyle='#fff';ctx.font='11px sans-serif';ctx.fillText('🔒',sx+2,sy+12)}
+  if(showFree&&sw>=10&&sh>=10&&noRoadNeeded(b))drawFreeMark(sx,sy,sw,sh);
   if(!b.isRoad){
-   if(showLabels && sw>=44 && sh>=18){
-    ctx.save();ctx.beginPath();ctx.rect(sx,sy,sw,sh);ctx.clip();
-    ctx.font='10px sans-serif';
-    ctx.fillStyle='rgba(0,0,0,0.8)';
-    ctx.fillText(String(b.name),sx+3,sy+12);
-    ctx.font='9px sans-serif';
-    ctx.fillStyle='rgba(0,0,0,0.65)';
-    ctx.fillText('Niv. '+b.level,sx+3,sy+sh-4);
-    ctx.restore();
+   if(showLabels && sw>=20 && sh>=14){
+    drawNameInBox(b,sx,sy,sw,sh);
    }
    else if(sw>=12 && sh>=10){
     const num=String(b.level);
@@ -2086,18 +2133,28 @@ async function buildGlobalOptimization(onProgress){
    freeBefore:freeBefore,freeAfter:freeBefore+removedN,emprise:0,score:-1,removed:removedN,
    keepIds:keepIds});
  }
- /* AMÉLIORATION depuis la cité actuelle (déplace quelques bâtiments contre des rues existantes) */
- let loc=null;
- try{loc=await improveLayout(roadMovable,9000)}catch(e){console.error(e)}
- if(loc&&loc.moved>0&&loc.roadCells.length<K){
+ /* AMÉLIORATIONS depuis la cité actuelle : plusieurs recherches différentes ; on garde les dispositions DISTINCTES (jusqu'à 5), classées par rues économisées */
+ {
+  const seenSig=new Set(),variants=[];
   const roadsInZone=roadMovable.filter(r=>unlockedCells.has(r.x+','+r.y)).length;
-  scenarios.unshift({kind:'remaniement',local:true,positions:loc.positions,roadCells:loc.roadCells,railCells:[],unplaced:[],keepRails:true,moved:loc.moved,
-   roadTilesNeeded:loc.roadCells.length,roadTilesAvailable:stockTiles,railTilesNeeded:0,railTilesAvailable:0,ensemble:false,reserve:null,reserveAsked:false,unservedFixed:0,
-   freeBefore:freeBefore,freeAfter:freeBefore+(roadsInZone-loc.roadCells.length),emprise:0,score:-2,baseRues:K});
+  for(let run=0;run<6&&variants.length<5;run++){
+   let loc=null;
+   try{loc=await improveLayout(roadMovable,1500)}catch(e){console.error(e)}
+   if(onProgress)onProgress(run+1,8);
+   if(!loc||!loc.moved||loc.roadCells.length>=K)continue;
+   const sig=[...loc.positions.entries()].map(e=>e[0]+':'+e[1].x+','+e[1].y).sort().join('|');
+   if(seenSig.has(sig))continue;seenSig.add(sig);variants.push(loc);
+  }
+  variants.sort((x,y)=>x.roadCells.length-y.roadCells.length||x.moved-y.moved);
+  for(let i=variants.length-1;i>=0;i--){const loc=variants[i];
+   scenarios.unshift({kind:'remaniement',local:true,positions:loc.positions,roadCells:loc.roadCells,railCells:[],unplaced:[],keepRails:true,moved:loc.moved,
+    roadTilesNeeded:loc.roadCells.length,roadTilesAvailable:stockTiles,railTilesNeeded:0,railTilesAvailable:0,ensemble:false,reserve:null,reserveAsked:false,unservedFixed:0,
+    freeBefore:freeBefore,freeAfter:freeBefore+(roadsInZone-loc.roadCells.length),emprise:0,score:-2,baseRues:K});
+  }
  }
  /* RECUIT SIMULÉ : proposé seulement s'il économise au moins 5 rues de plus que la meilleure autre proposition (sinon déplacer beaucoup de bâtiments pour presque rien n'a pas d'intérêt) */
  let sa=null;
- try{sa=await improveSA(roadMovable,6000,(e,b)=>{if(onProgress)onProgress(e,b)})}catch(e){console.error(e)}
+ try{sa=await improveSA(roadMovable,4000,(e,b)=>{if(onProgress)onProgress(e,b)})}catch(e){console.error(e)}
  {
   const refBest=scenarios.length?Math.min.apply(null,scenarios.map(x=>x.roadTilesNeeded)):K;
   if(sa&&sa.moved>0&&sa.roadCells.length<=refBest-5){
@@ -2177,15 +2234,64 @@ function applyScenario(sc){
  document.getElementById('scenarioModal').style.display='none';document.getElementById('previewBar').style.display='none';optimizerSession=null;window.__preview=false;saveToStorage();
  flash('⚡ Remaniement appliqué : '+sc.moved+' bâtiment(s) déplacé(s). '+(res.stock?res.stock+' rue(s) en stock à droite de la carte (hors de la cité).':'Aucune rue en trop : le plan utilise toutes tes rues.'));
 }
+/* ---------- MESURE DE LA PLACE LIBRE : un gain de place n'est utile que s'il forme un BLOC ---------- */
+const TAILLES_TEST=[[2,2],[3,3],[3,4],[4,4],[4,5],[5,5],[5,6],[6,6],[6,7],[7,7],[8,8]];
+function freeStats(){
+ const occ=new Set();for(const b of buildings)for(let i=0;i<b.w;i++)for(let j=0;j<b.h;j++)occ.add((b.x+i)+','+(b.y+j));
+ let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+ for(const k of unlockedCells){const c=k.split(',');const x=+c[0],y=+c[1];if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y}
+ if(minX>maxX)return {total:0,rectW:0,rectH:0,rectArea:0,tiny:0,zones:0,fits:[]};
+ const W=maxX-minX+1,H=maxY-minY+1,lib=[];let total=0;
+ for(let y=0;y<H;y++){const row=new Uint8Array(W);for(let x=0;x<W;x++){const k=(x+minX)+','+(y+minY);if(unlockedCells.has(k)&&!occ.has(k)){row[x]=1;total++}}lib.push(row)}
+ // plus grand rectangle libre (histogramme)
+ let best={a:0,w:0,h:0};const hts=new Array(W).fill(0);
+ for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++)hts[x]=lib[y][x]?hts[x]+1:0;
+  const st=[];
+  for(let x=0;x<=W;x++){const cur=x===W?0:hts[x];let start=x;
+   while(st.length&&st[st.length-1][1]>=cur){const [sx,sh]=st.pop();const w=x-sx,a=w*sh;if(a>best.a)best={a:a,w:Math.max(w,sh),h:Math.min(w,sh)};start=sx}
+   st.push([start,cur])}
+ }
+ // petits trous isolés (zones libres de moins de 4 cases)
+ const seen=new Uint8Array(W*H);let tiny=0,zones=0;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(!lib[y][x]||seen[y*W+x])continue;zones++;let n=0;const q=[[x,y]];seen[y*W+x]=1;
+  while(q.length){const c=q.pop();n++;for(const d of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=c[0]+d[0],ny=c[1]+d[1];if(nx>=0&&ny>=0&&nx<W&&ny<H&&lib[ny][nx]&&!seen[ny*W+nx]){seen[ny*W+nx]=1;q.push([nx,ny])}}}
+  if(n<4)tiny++}
+ // tailles standard qui tiennent
+ const S=[];for(let y=0;y<=H;y++)S.push(new Int32Array(W+1));
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++)S[y+1][x+1]=S[y][x+1]+S[y+1][x]-S[y][x]+(lib[y][x]?1:0);
+ const fit=(w,h)=>{for(let y=0;y+h<=H;y++)for(let x=0;x+w<=W;x++)if(S[y+h][x+w]-S[y][x+w]-S[y+h][x]+S[y][x]===w*h)return true;return false};
+ const fits=TAILLES_TEST.filter(t=>fit(t[0],t[1])||fit(t[1],t[0])).map(t=>t[0]+'×'+t[1]);
+ return {total:total,rectW:best.w,rectH:best.h,rectArea:best.a,tiny:tiny,zones:zones,fits:fits};
+}
+function describeBloc(base,st){
+ const gain=st.total-base.total,nouvelles=st.fits.filter(f=>!base.fits.includes(f));
+ const rect=(o)=>o.rectW+'×'+o.rectH+' ('+o.rectArea+' cases)';
+ let verdict,txt;
+ if(gain<=0&&st.rectArea<=base.rectArea){verdict='aucun gain de place';txt='⚠ Aucun gain de place.'}
+ else if(st.rectArea>=base.rectArea+4||nouvelles.length){
+  verdict='le gain forme un bloc libre';
+  txt='✅ Le gain FORME un bloc : plus grand espace libre d\'un seul tenant '+rect(base)+' → '+rect(st)+'.'+(nouvelles.length?' Nouvelle(s) taille(s) qui tiennent : '+nouvelles.join(', ')+'.':'');
+ }else{
+  verdict='gain dispersé, aucun bloc plus grand';
+  txt='⚠ Gain DISPERSÉ : '+(gain>=0?'+':'')+gain+' case(s) libre(s) mais aucun bloc plus grand (plus grand espace libre : '+rect(base)+' avant, '+rect(st)+' après). Peu d\'intérêt de remanier pour la place.';
+ }
+ txt+='\nPetits trous inutilisables (moins de 4 cases) : '+base.tiny+' → '+st.tiny+'.';
+ return {txt:txt,verdict:verdict};
+}
 let lastOptimResult=null;
 function scenarioReportText(){
  if(!lastOptimResult)return 'Aucun calcul.';
  let t='COMPTE RENDU OPTIMISEUR V16.0\n\n'+reportContext()+'\n';
  const r=lastOptimResult;
  t+='Calcul : '+r.tried+' essais, '+r.valid+' plans valides, '+r.scenarios.length+' proposés. Rues déplaçables disponibles : '+r.scenarios[0].roadTilesAvailable+' cases. Rails/rues verrouillés (obstacles) : '+r.roadFixed.length+'\n\n';
+ if(r.baseStats)t+='CITÉ ACTUELLE : '+r.baseStats.total+' cases libres, plus grand espace libre d\'un seul tenant '+r.baseStats.rectW+'×'+r.baseStats.rectH+' ('+r.baseStats.rectArea+' cases), petits trous inutilisables : '+r.baseStats.tiny+'. Tailles qui tiennent : '+(r.baseStats.fits.join(', ')||'aucune')+'.\n\n';
+ let pi2=-1;
  r.scenarios.forEach((sc,i)=>{
-  t+='REMANIEMENT '+String.fromCharCode(65+i)+' : rues utilisées '+sc.roadTilesNeeded+(sc.ensemble?', rails '+sc.railTilesNeeded+'/'+sc.railTilesAvailable:'')+', cases libres '+sc.freeBefore+' -> '+sc.freeAfter+', emprise '+sc.emprise+' cases, déplacés '+sc.moved+', non placés '+sc.unplaced.length+'\n';
+  if(sc.kind!=='nettoyage')pi2++;
+  t+=(sc.kind==='nettoyage'?'OPTION (retirer seulement les rues inutiles)':'REMANIEMENT '+String.fromCharCode(65+pi2))+' : rues utilisées '+sc.roadTilesNeeded+(sc.ensemble?', rails '+sc.railTilesNeeded+'/'+sc.railTilesAvailable:'')+', cases libres '+sc.freeBefore+' -> '+sc.freeAfter+', emprise '+sc.emprise+' cases, déplacés '+sc.moved+', non placés '+sc.unplaced.length+'\n';
   if(sc.unplaced.length){const names=sc.unplaced.map(id=>{const b=buildings.find(q=>q.id===id);return b?b.name+' '+b.w+'x'+b.h:id});t+='  Non placés : '+names.join(', ')+'\n'}
+  if(sc.blocText)t+='  '+sc.blocText.replace(/\n/g,'\n  ')+'\n';
  });
  return t;
 }
@@ -2193,13 +2299,23 @@ document.getElementById('btnCopyScenarios').onclick=()=>showReport('Compte rendu
 function showOptimizationScenarios(result){
  window.__preview=true;
  lastOptimResult=result;optimizerSession={snapshot:snap(),roadFixed:result.roadFixed,roadMovable:result.roadMovable,railMovable:result.railMovable||[]};
+ {const baseStats=freeStats();result.baseStats=baseStats;
+  for(const sc of result.scenarios){renderScenarioPreview(sc);sc.stats=freeStats();const d=describeBloc(baseStats,sc.stats);sc.blocText=d.txt;sc.verdict=d.verdict}
+  restoreOptimizerSession(false);}
  const list=document.getElementById('scenarioList'),status=document.getElementById('scenarioStatus'),apply=document.getElementById('btnApplyScenario');
  list.innerHTML='';status.textContent=(result.notes||[]).join(' ');apply.disabled=true;
  let selected=null;
+ const oldOpt=document.getElementById('scenarioOptionBox');if(oldOpt)oldOpt.remove();
+ const optBox=document.createElement('div');optBox.id='scenarioOptionBox';optBox.style.marginTop='14px';
+ if(result.scenarios.some(x=>x.kind==='nettoyage')){const h=document.createElement('h4');h.textContent="Option (ce n'est pas un remaniement)";optBox.appendChild(h)}
+ list.parentNode.insertBefore(optBox,list.nextSibling);
+ let pi=-1;
  result.scenarios.forEach((sc,i)=>{
+  if(sc.kind!=='nettoyage')pi++;
+  const letter=sc.kind==='nettoyage'?'':String.fromCharCode(65+pi);
   const card=document.createElement('div');card.className='scenarioCard';
   const nb=result.scenarios.filter(x=>x.kind!=='nettoyage'&&!x.local&&result.scenarios.indexOf(x)<=i).length;
-  const title=document.createElement('h3');title.textContent=sc.local?'✨ Amélioration : '+sc.moved+' bâtiment(s) déplacé(s) contre des rues existantes':(sc.kind==='nettoyage'?'🧹 Nettoyage : retirer les rues inutiles (aucun bâtiment ne bouge)':'Remaniement '+String.fromCharCode(64+nb)+(nb===1?' — le moins de rues':''));
+  const title=document.createElement('h3');title.textContent=sc.local?'✨ Disposition '+letter+' : '+sc.moved+' bâtiment(s) déplacé(s) contre des rues existantes':(sc.kind==='nettoyage'?'🧹 Retirer seulement les rues inutiles (aucun bâtiment ne bouge)':'Remaniement '+String.fromCharCode(64+nb)+(nb===1?' — le moins de rues':''));
   const desc=document.createElement('p');
   const gain=sc.freeAfter-sc.freeBefore;
   const ecart=sc.roadTilesAvailable-sc.roadTilesNeeded;
@@ -2215,13 +2331,14 @@ function showOptimizationScenarios(result){
   if(sc.unservedFixed)t+='\n⚠ '+sc.unservedFixed+' bâtiment(s) verrouillé(s) qui demandent une rue n\'ont pas pu en recevoir une.';
   if(sc.unplaced.length)t+='\n⚠ '+sc.unplaced.length+' bâtiment(s) n\'ont pas trouvé de place : ils sont rangés à droite de la carte, en rouge.';
   }
+  if(sc.blocText)t+='\n'+sc.blocText;
   desc.style.whiteSpace='pre-line';desc.textContent=t;
   const view=document.createElement('button');view.textContent='Voir sur la carte';
-  view.onclick=()=>{document.querySelectorAll('.scenarioCard').forEach(x=>x.classList.remove('selected'));card.classList.add('selected');selected=sc;apply.disabled=false;renderScenarioPreview(sc);status.textContent='Aperçu du remaniement '+String.fromCharCode(65+i);
+  view.onclick=()=>{document.querySelectorAll('.scenarioCard').forEach(x=>x.classList.remove('selected'));card.classList.add('selected');selected=sc;apply.disabled=false;renderScenarioPreview(sc);status.textContent='Aperçu du remaniement '+letter;
   document.getElementById('scenarioModal').style.display='none';
-  document.getElementById('previewLabel').textContent='Aperçu du remaniement '+String.fromCharCode(65+i);
+  document.getElementById('previewLabel').textContent='Aperçu du remaniement '+letter+(sc.verdict?' — '+sc.verdict:'');
   document.getElementById('previewBar').style.display='flex';};
-  card.append(title,desc,view);list.appendChild(card);
+  card.append(title,desc,view);(sc.kind==='nettoyage'?optBox:list).appendChild(card);
  });
  apply.onclick=()=>{if(selected&&confirm('Appliquer ce remaniement à la cité ?\nTu pourras revenir en arrière avec ↩ Annuler.'))applyScenario(selected);};
  document.getElementById('previewBar').style.display='none';
