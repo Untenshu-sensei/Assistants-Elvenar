@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Assistants interactifs pour accompagner les joueurs d'Elvenar dans la gestion, l'optimisation et le développement de leur cité.">
+  <title>Assistants Elvenar — Boîte à outils des joueurs</title>
+
+  <style>
+    :root {
+      --fond: #101827;
+      --fond-b: #17243a;
+      --halo: #34496a;
+      --panneau: #1b2940;
+      --panneau-haut: #22334e;
+      --panneau-survol: #293d5a;
+      --or: #e7c77b;
+      --texte: #f4f0e6;
+      --secondaire: #c4ccda;
+      --bordure: rgba(231, 199, 123, .3);
+    }
+
+    /* Peuple choisi : humains (bleu nuit) ou elfes (vert sombre) */
+    body[data-peuple="humain"] {
+      --fond: #101827; --fond-b: #17243a; --halo: #3b5380;
+      --panneau: #1b2940; --panneau-haut: #22334e; --panneau-survol: #2b4068;
+    }
+    body[data-peuple="elfe"] {
+      --fond: #0e1d19; --fond-b: #13291f; --halo: #2f6a52;
+      --panneau: #173026; --panneau-haut: #1d3b2f; --panneau-survol: #25503f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--texte);
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(ellipse at 50% -10%, var(--halo) 0, transparent 55%),
+        linear-gradient(160deg, var(--fond), var(--fond-b) 55%, var(--fond));
+      background-attachment: fixed;
+      transition: background .6s ease;
+    }
+    body.intro-actif { overflow: hidden; }
+
+    .conteneur {
+      position: relative;
+      z-index: 1;
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 28px;
+    }
+
+    /* ---------- Décor : petits ornements qui flottent doucement ---------- */
+    .ornements { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .ornements span {
+      position: absolute;
+      font-size: clamp(28px, 5vw, 54px);
+      opacity: .13;
+      filter: saturate(.8);
+      animation: flotte 16s ease-in-out infinite;
+    }
+    .ornements span:nth-child(1) { left: 5%;  top: 18%; animation-delay: 0s; }
+    .ornements span:nth-child(2) { left: 88%; top: 26%; animation-delay: -4s; }
+    .ornements span:nth-child(3) { left: 10%; top: 62%; animation-delay: -8s; }
+    .ornements span:nth-child(4) { left: 90%; top: 70%; animation-delay: -2s; }
+    .ornements span:nth-child(5) { left: 48%; top: 86%; animation-delay: -10s; }
+    .ornements span:nth-child(6) { left: 70%; top: 8%;  animation-delay: -6s; }
+    @keyframes flotte {
+      0%, 100% { transform: translateY(0) rotate(-3deg); }
+      50%      { transform: translateY(-18px) rotate(3deg); }
+    }
+
+    /* ---------- Scène d'accueil ---------- */
+    .scene-cadre {
+      margin: 0 auto 18px;
+      max-width: 880px;
+      border: 1px solid var(--bordure);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
+      background: #0e1424;
+    }
+    .scene-cadre svg { display: block; width: 100%; height: auto; }
+    .scene-legende {
+      margin: 8px 0 0;
+      text-align: center;
+      color: var(--secondaire);
+      font-size: .92rem;
+      min-height: 1.4em;
+    }
+
+    header { text-align: center; margin-bottom: 26px; }
+
+    .surtitre {
+      color: var(--or);
+      font-size: 16px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 12px 0;
+      color: #f8e7bd;
+      font-size: clamp(2rem, 5vw, 3.3rem);
+      line-height: 1.12;
+    }
+
+    .accroche {
+      max-width: 760px;
+      margin: 0 auto;
+      color: var(--secondaire);
+      font-size: 1.12rem;
+      line-height: 1.6;
+    }
+
+    .introduction {
+      max-width: 820px;
+      margin: 0 auto 30px;
+      color: var(--secondaire);
+      text-align: center;
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    h2 {
+      margin: 0 0 22px;
+      color: var(--or);
+      text-align: center;
+      font-size: 1.8rem;
+    }
+
+    /* ---------- Choix du peuple et de l'âge ---------- */
+    .profil {
+      max-width: 820px;
+      margin: 0 auto 36px;
+      padding: 20px 22px 18px;
+      background: linear-gradient(145deg, var(--panneau-haut), var(--panneau));
+      border: 1px solid var(--bordure);
+      border-radius: 14px;
+      text-align: center;
+    }
+    .profil h2 { font-size: 1.35rem; margin-bottom: 8px; }
+    .profil .aide { margin: 0 0 14px; color: var(--secondaire); font-size: .95rem; }
+    .profil fieldset { border: 0; margin: 0 0 12px; padding: 0; }
+    .profil legend { color: var(--secondaire); font-size: .95rem; margin: 0 auto 8px; padding: 0; }
+    .choix { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .choix label {
+      display: inline-flex; align-items: center; gap: 8px;
+      min-height: 46px; padding: 8px 18px;
+      border: 1px solid var(--bordure); border-radius: 999px;
+      background: rgba(0, 0, 0, .18); cursor: pointer; font-size: 1.02rem;
+    }
+    .choix input { width: 18px; height: 18px; accent-color: var(--or); }
+    .choix label:has(input:checked) { border-color: var(--or); box-shadow: 0 0 0 2px var(--or) inset; }
+    .choix label:focus-within { outline: 3px solid #8db7ff; outline-offset: 2px; }
+    .ligne-age { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
+    .ligne-age label { color: var(--secondaire); }
+    select {
+      min-height: 46px; padding: 8px 12px; max-width: 100%;
+      color: var(--texte); background: #0f1a2c; border: 1px solid var(--bordure);
+      border-radius: 10px; font: inherit;
+    }
+    select:focus-visible { outline: 3px solid #8db7ff; outline-offset: 2px; }
+
+    /* ---------- Liste des assistants (inchangée) ---------- */
+    .grille {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .assistant {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 92px;
+      padding: 18px;
+      color: var(--texte);
+      text-decoration: none;
+      background: linear-gradient(145deg, var(--panneau-haut), var(--panneau));
+      border: 1px solid var(--bordure);
+      border-radius: 14px;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .assistant:hover,
+    .assistant:focus-visible {
+      transform: translateY(-3px);
+      border-color: var(--or);
+      background: var(--panneau-survol);
+      outline: none;
+    }
+    .assistant:focus-visible { box-shadow: 0 0 0 3px #8db7ff; }
+
+    .icone { flex: 0 0 42px; font-size: 30px; text-align: center; }
+
+    .assistant strong { display: block; color: #f8e7bd; font-size: 1.04rem; }
+
+    .assistant small {
+      display: block;
+      margin-top: 5px;
+      color: var(--secondaire);
+      font-family: Arial, sans-serif;
+      font-size: .78rem;
+      line-height: 1.4;
+    }
+
+    .information {
+      max-width: 820px;
+      margin: 30px auto 0;
+      padding: 18px 20px;
+      color: var(--secondaire);
+      text-align: center;
+      line-height: 1.6;
+      border-top: 1px solid var(--bordure);
+      border-bottom: 1px solid var(--bordure);
+    }
+
+    .information strong,
+    footer strong { color: var(--or); }
+
+    footer {
+      margin-top: 25px;
+      color: #aeb8c8;
+      text-align: center;
+      font-size: .95rem;
+    }
+    .lien-intro {
+      margin-top: 10px; padding: 8px 14px; min-height: 40px;
+      color: var(--secondaire); background: transparent; font: inherit; font-size: .9rem;
+      border: 1px solid var(--bordure); border-radius: 999px; cursor: pointer;
+    }
+    .lien-intro:hover { border-color: var(--or); color: var(--texte); }
+    .lien-intro:focus-visible { outline: 3px solid #8db7ff; outline-offset: 2px; }
+
+    /* ---------- Introduction : le brouillard se dissipe ---------- */
+    #intro {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 40%, #1d2b4a 0, #0b1020 70%);
+      transition: opacity .9s ease;
+    }
+    #intro.fin { opacity: 0; pointer-events: none; }
+    #intro .scene-intro { width: min(1000px, 96vw); border-radius: 16px; overflow: hidden; box-shadow: 0 12px 50px rgba(0,0,0,.6); }
+    #intro .scene-intro svg { display: block; width: 100%; height: auto; }
+    #intro .titre-intro {
+      position: absolute; left: 0; right: 0; bottom: 9%;
+      text-align: center; color: #f8e7bd; font-size: clamp(1.4rem, 4vw, 2.4rem);
+      text-shadow: 0 2px 14px rgba(0,0,0,.8); letter-spacing: .06em;
+      opacity: 0; animation: apparait 1.4s ease 2.2s forwards;
+    }
+    @keyframes apparait { to { opacity: 1; } }
+    .brume { position: absolute; inset: 0; pointer-events: none; animation: dissipe 3.8s ease-in forwards; }
+    .brume i {
+      position: absolute; inset: -20%;
+      background:
+        radial-gradient(ellipse 40% 30% at 20% 40%, rgba(235,240,248,.95), transparent 70%),
+        radial-gradient(ellipse 45% 35% at 70% 55%, rgba(225,232,244,.95), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 45% 20%, rgba(240,244,250,.9), transparent 70%),
+        radial-gradient(ellipse 55% 40% at 55% 85%, rgba(228,236,246,.9), transparent 70%);
+      filter: blur(26px);
+      animation: derive 6s ease-in-out forwards;
+    }
+    .brume i:nth-child(2) { animation-duration: 7s; animation-direction: reverse; opacity: .9; }
+    .brume i:nth-child(3) { animation-duration: 5s; opacity: .8; }
+    @keyframes derive {
+      from { transform: translateX(0) scale(1); }
+      to   { transform: translateX(14%) scale(1.25); }
+    }
+    @keyframes dissipe {
+      0%   { opacity: 1; }
+      35%  { opacity: .95; }
+      100% { opacity: 0; }
+    }
+    #passer {
+      position: absolute; right: 16px; bottom: 16px; z-index: 2;
+      min-height: 44px; padding: 8px 18px; font: inherit; color: #f8e7bd;
+      background: rgba(10, 16, 32, .75); border: 1px solid rgba(231,199,123,.6);
+      border-radius: 999px; cursor: pointer;
+    }
+    #passer:focus-visible { outline: 3px solid #8db7ff; outline-offset: 2px; }
+
+    /* Bougies de la scène */
+    .flamme { transform-origin: center bottom; animation: vacille 1.3s ease-in-out infinite alternate; }
+    .flamme:nth-of-type(2n) { animation-duration: 1.7s; }
+    @keyframes vacille { from { transform: scale(1, .92); opacity: .85; } to { transform: scale(1, 1.1); opacity: 1; } }
+
+    @media (max-width: 560px) {
+      .conteneur { padding-top: 18px; }
+      .grille { grid-template-columns: 1fr; }
+      .ornements span { opacity: .1; }
+    }
+
+    /* Respect de « réduire les animations » */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      #intro { display: none !important; }
+    }
+  </style>
+</head>
+
+<body data-peuple="" data-age="">
+  <div class="ornements" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+  <!-- Introduction : brouillard qui se dissipe sur la grande table de marbre -->
+  <div id="intro" role="dialog" aria-label="Introduction : humains et elfes réunis autour d'une table">
+    <div class="scene-intro" id="scene-intro"></div>
+    <div class="brume" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="titre-intro" aria-hidden="true">Assistants Elvenar</div>
+    <button id="passer" type="button">Passer l'introduction ›</button>
+  </div>
+
+  <main class="conteneur">
+
+    <header>
+      <div class="scene-cadre" id="scene-banniere"></div>
+      <p class="scene-legende" id="legende" aria-live="polite">Humains et elfes réunis pour suivre la progression du jeu.</p>
+      <div class="surtitre">🏰 Boîte à outils des joueurs</div>
+      <h1>Assistants Elvenar</h1>
+      <p class="accroche">
+        Des outils interactifs pour mieux gérer, comprendre et développer votre cité.
+      </p>
+    </header>
+
+    <p class="introduction">
+      Bienvenue dans <strong>Assistants Elvenar</strong> !
+      Que vous soyez débutant ou joueur expérimenté, retrouvez ici
+      plusieurs assistants conçus pour vous aider à prendre vos décisions,
+      anticiper vos besoins et optimiser votre progression.
+    </p>
+
+    <section class="profil" aria-labelledby="titre-profil">
+      <h2 id="titre-profil">Mon peuple et mon âge</h2>
+      <p class="aide">Facultatif : choisissez votre peuple et votre âge pour habiller la page à vos couleurs. Votre choix reste sur votre appareil.</p>
+      <fieldset>
+        <legend>Je joue…</legend>
+        <div class="choix">
+          <label><input type="radio" name="peuple" value="humain"> 👑 les Humains</label>
+          <label><input type="radio" name="peuple" value="elfe"> 🍃 les Elfes</label>
+        </div>
+      </fieldset>
+      <div class="ligne-age">
+        <label for="age">Mon âge (chapitre) :</label>
+        <select id="age"></select>
+      </div>
+    </section>
+
+    <h2>Les assistants disponibles</h2>
+
+    <section class="grille" aria-label="Liste des assistants">
+
+      <a class="assistant" href="Optimiseur_Cit%C3%A9.html">
+        <span class="icone">📐</span>
+        <span>
+          <strong>Optimiseur de Cité</strong>
+          <small>Organisation et implantation de la cité</small>
+        </span>
+      </a>
+
+      <a class="assistant" href="Academie.html">
+        <span class="icone">🧪</span>
+        <span>
+          <strong>Académie</strong>
+          <small>Assistant dédié à l'Académie</small>
+        </span>
+      </a>
+
+      <a class="assistant" href="Artisanat.html">
+        <span class="icone">🔨</span>
+        <span>
+          <strong>Artisanat</strong>
+          <small>Outils liés à l'artisanat</small>
+        </span>
+      </a>
+
+      <a class="assistant" href="Assistant%20Strat%C3%A9gique%20%26%20Directif.html">
+        <span class="icone">👑</span>
+        <span>
+          <strong>Assistant Stratégique &amp; Orientation</strong>
+          <small>Aide à la décision et à l'orientation</small>
+        </span>
+      </a>
+
+      <a class="assistant" href="Module%20Tactique%20Express.html">
+        <span class="icone">⚡</span>
+        <span>
+          <strong>Module Tactique Express</strong>
+          <small>Préparation tactique rapide</small>
+        </span>
+      </a>
+
+      <a class="assistant" href="Negociation.html">
+        <span class="icone">🤝</span>
+        <span>
+          <strong>Assistant Négociations</strong>
+          <small>Accompagnement des négociations</small>
+        </span>
+      </a>
+
+      <a class="assistant" href="Combats.html">
+        <span class="icone">⚔️</span>
+        <span>
+          <strong>Assistant Combats</strong>
+          <small>Préparation et aide aux combats</small>
+        </span>
+      </a>
+
+    </section>
+
+    <div class="information">
+      💡 <strong>Aucune installation nécessaire :</strong>
+      tous les outils fonctionnent directement dans votre navigateur,
+      sur ordinateur comme sur smartphone.
+    </div>
+
+    <footer>
+      Conception et développement : <strong>Untenshu</strong>
+      <br>
+      Outils indépendants, non affiliés à InnoGames.
+      Les conseils sont des indications, pas des garanties.
+      <br>
+      <button class="lien-intro" id="revoir" type="button">✨ Revoir l'introduction</button>
+    </footer>
+
+  </main>
+
+  <script>
+  (function () {
+    "use strict";
+
+    /* ======================================================================
+       ÂGES : thème de chaque âge (chapitre). Pour modifier un thème, il suffit
+       de changer une ligne : nom, couleur (accent) et trois petits ornements.
+       Tous les dessins sont originaux et génériques (aucun visuel du jeu).
+       ====================================================================== */
+    var AGES = {
+      "6":  { nom: "Nains",                  couleur: "#d9904a", orn: ["🔨", "⛏️", "🪨"] },
+      "7":  { nom: "Fées",                   couleur: "#e79ad8", orn: ["🧚", "✨", "🌸"] },
+      "8":  { nom: "Orcs et gobelins",       couleur: "#a3c24a", orn: ["🏕️", "🔥", "🍄"] },
+      "9":  { nom: "Elfes sylvains",         couleur: "#58bf7b", orn: ["🌳", "🍃", "🦌"] },
+      "10": { nom: "Sorciers et dragons",    couleur: "#a58ae6", orn: ["🐉", "🔮", "🌙"] },
+      "11": { nom: "Halfelins",              couleur: "#d9b955", orn: ["🏡", "🌻", "🥕"] },
+      "12": { nom: "Élémentaires",           couleur: "#4cc3d6", orn: ["💎", "🔥", "💧"] },
+      "13": { nom: "Amuni",                  couleur: "#e6bb55", orn: ["🏜️", "🔺", "☀️"] },
+      "14": { nom: "Créateurs",              couleur: "#86b1d6", orn: ["⚙️", "🕰️", "🔧"] },
+      "15": { nom: "Les Elvenar",            couleur: "#88d2ae", orn: ["🌳", "✨", "🏛️"] },
+      "16": { nom: "Ambassades",             couleur: "#d6b45a", orn: ["🚩", "⚖️", "📜"] },
+      "17": { nom: "Marchands d'Unur",       couleur: "#e0a45a", orn: ["🐪", "💰", "⚖️"] },
+      "18": { nom: "Esprit d'équipe",        couleur: "#6db3e6", orn: ["🏆", "🛡️", "🤝"] },
+      "19": { nom: "Revanche de l'Exilé",    couleur: "#b08ae0", orn: ["🌑", "🗡️", "🕯️"] },
+      "20": { nom: "Pouvoir de la musique",  couleur: "#e585b3", orn: ["🎵", "🎻", "🎶"] },
+      "21": { nom: "Légende vallorienne",    couleur: "#86a0ee", orn: ["🔮", "🌟", "🧪"] },
+      "22": { nom: "Ports des profondeurs",  couleur: "#46afd0", orn: ["⚓", "🌊", "🐚"] },
+      "23": { nom: "Licornes",               couleur: "#dca0ee", orn: ["🦄", "🌈", "⭐"] },
+      "24": { nom: "Bastet",                 couleur: "#e2bb5a", orn: ["🐈", "🌙", "🔱"] },
+      "25": { nom: "Le sens de la vie",      couleur: "#7fd9a6", orn: ["🌀", "🌱", "♾️"] }
+    };
+    /* Les âges 1 à 5 reprennent le thème du peuple choisi. */
+    var DEBUT = {
+      humain: { couleur: "#e7c77b", orn: ["🏰", "🛡️", "⚜️"], nom: "Humains" },
+      elfe:   { couleur: "#9fe0b4", orn: ["🌿", "🍃", "🏹"], nom: "Elfes" }
+    };
+    var COULEUR_DEFAUT = "#e7c77b";
+
+    /* ======================================================================
+       OUTILS
+       ====================================================================== */
+    function lum(hex) {
+      var c = [1, 3, 5].map(function (i) {
+        var v = parseInt(hex.substr(i, 2), 16) / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    }
+    function contraste(a, b) {
+      var la = lum(a), lb = lum(b), hi = Math.max(la, lb), lo = Math.min(la, lb);
+      return (hi + 0.05) / (lo + 0.05);
+    }
+    function melange(hex, t) { /* éclaircit la couleur vers le blanc */
+      var r = [1, 3, 5].map(function (i) {
+        var v = parseInt(hex.substr(i, 2), 16);
+        return Math.round(v + (255 - v) * t);
+      });
+      return "#" + r.map(function (v) { return ("0" + v.toString(16)).slice(-2); }).join("");
+    }
+    function lisible(couleur, fond) { /* garantit un texte lisible sur le fond */
+      var t = 0, c = couleur;
+      while (contraste(c, fond) < 5 && t < 1) { t += 0.1; c = melange(couleur, t); }
+      return c;
+    }
+    function lire(cle) { try { return localStorage.getItem(cle); } catch (e) { return null; } }
+    function ecrire(cle, v) { try { localStorage.setItem(cle, v); } catch (e) {} }
+
+    /* ======================================================================
+       SCÈNE : humains et elfes réunis autour d'une grande table en marbre
+       (dessin original, stylisé, généré en SVG)
+       ====================================================================== */
+    function figure(cx, base, type, v) {
+      var s = "", hy = base - 108, peau = "#e8c8a4";
+      if (type === "humain") {
+        var robes = ["#2c4d8f", "#6b2f3a", "#4a4036"], lisere = "#e7c77b";
+        var robe = robes[v];
+        s += '<path d="M' + (cx - 34) + ' ' + base + ' Q' + (cx - 38) + ' ' + (hy + 34) + ' ' + cx + ' ' + (hy + 28) + ' Q' + (cx + 38) + ' ' + (hy + 34) + ' ' + (cx + 34) + ' ' + base + 'Z" fill="' + robe + '"/>';
+        s += '<path d="M' + cx + ' ' + (hy + 28) + ' L' + cx + ' ' + base + '" stroke="' + lisere + '" stroke-width="3" opacity=".85"/>';
+        s += '<rect x="' + (cx - 5) + '" y="' + (hy + 14) + '" width="10" height="16" rx="4" fill="' + peau + '"/>';
+        s += '<circle cx="' + cx + '" cy="' + hy + '" r="17" fill="' + peau + '"/>';
+        if (v === 0) { /* couronne */
+          s += '<path d="M' + (cx - 17) + ' ' + (hy - 9) + ' L' + (cx - 12) + ' ' + (hy - 26) + ' L' + (cx - 5) + ' ' + (hy - 14) + ' L' + cx + ' ' + (hy - 28) + ' L' + (cx + 5) + ' ' + (hy - 14) + ' L' + (cx + 12) + ' ' + (hy - 26) + ' L' + (cx + 17) + ' ' + (hy - 9) + 'Z" fill="#e7c77b" stroke="#a8863a" stroke-width="1.5"/>';
+          s += '<path d="M' + (cx - 17) + ' ' + (hy + 4) + ' Q' + cx + ' ' + (hy + 34) + ' ' + (cx + 17) + ' ' + (hy + 4) + ' Q' + cx + ' ' + (hy + 12) + ' ' + (cx - 17) + ' ' + (hy + 4) + 'Z" fill="#d8d2c4"/>';
+        } else if (v === 1) { /* casque à plumet */
+          s += '<path d="M' + (cx - 18) + ' ' + (hy + 2) + ' Q' + (cx - 18) + ' ' + (hy - 22) + ' ' + cx + ' ' + (hy - 22) + ' Q' + (cx + 18) + ' ' + (hy - 22) + ' ' + (cx + 18) + ' ' + (hy + 2) + 'Z" fill="#aab3bd" stroke="#6e7782" stroke-width="1.5"/>';
+          s += '<path d="M' + cx + ' ' + (hy - 22) + ' Q' + (cx + 8) + ' ' + (hy - 40) + ' ' + (cx + 22) + ' ' + (hy - 34) + ' Q' + (cx + 10) + ' ' + (hy - 30) + ' ' + cx + ' ' + (hy - 22) + 'Z" fill="#b8453f"/>';
+        } else { /* capuche d'érudit */
+          s += '<path d="M' + (cx - 21) + ' ' + (hy + 18) + ' Q' + (cx - 24) + ' ' + (hy - 24) + ' ' + cx + ' ' + (hy - 26) + ' Q' + (cx + 24) + ' ' + (hy - 24) + ' ' + (cx + 21) + ' ' + (hy + 18) + ' Q' + (cx + 12) + ' ' + (hy - 6) + ' ' + cx + ' ' + (hy - 6) + ' Q' + (cx - 12) + ' ' + (hy - 6) + ' ' + (cx - 21) + ' ' + (hy + 18) + 'Z" fill="#6a5a46"/>';
+        }
+      } else { /* elfe */
+        var cape = ["#2f7a52", "#245a63", "#6a5a8a"], argent = "#d8e6e0";
+        var capeC = cape[v];
+        s += '<path d="M' + (cx - 30) + ' ' + base + ' Q' + (cx - 34) + ' ' + (hy + 36) + ' ' + cx + ' ' + (hy + 30) + ' Q' + (cx + 34) + ' ' + (hy + 36) + ' ' + (cx + 30) + ' ' + base + 'Z" fill="' + capeC + '"/>';
+        s += '<path d="M' + (cx - 8) + ' ' + (hy + 32) + ' Q' + cx + ' ' + (hy + 58) + ' ' + (cx + 8) + ' ' + (hy + 32) + '" fill="none" stroke="' + argent + '" stroke-width="2.5" opacity=".9"/>';
+        s += '<rect x="' + (cx - 4) + '" y="' + (hy + 14) + '" width="8" height="18" rx="3" fill="#ecd7bd"/>';
+        /* longs cheveux derrière la tête */
+        var cheveux = ["#d9dfe2", "#6a4a2a", "#caa86a"][v];
+        s += '<path d="M' + (cx - 16) + ' ' + (hy - 4) + ' Q' + (cx - 26) + ' ' + (hy + 40) + ' ' + (cx - 14) + ' ' + (hy + 62) + ' L' + (cx + 14) + ' ' + (hy + 62) + ' Q' + (cx + 26) + ' ' + (hy + 40) + ' ' + (cx + 16) + ' ' + (hy - 4) + 'Z" fill="' + cheveux + '" opacity=".95"/>';
+        /* oreilles pointues */
+        s += '<path d="M' + (cx - 14) + ' ' + (hy - 2) + ' L' + (cx - 30) + ' ' + (hy - 12) + ' L' + (cx - 15) + ' ' + (hy + 8) + 'Z" fill="#ecd7bd"/>';
+        s += '<path d="M' + (cx + 14) + ' ' + (hy - 2) + ' L' + (cx + 30) + ' ' + (hy - 12) + ' L' + (cx + 15) + ' ' + (hy + 8) + 'Z" fill="#ecd7bd"/>';
+        s += '<ellipse cx="' + cx + '" cy="' + hy + '" rx="15" ry="18" fill="#ecd7bd"/>';
+        s += '<path d="M' + (cx - 16) + ' ' + (hy - 6) + ' Q' + cx + ' ' + (hy - 24) + ' ' + (cx + 16) + ' ' + (hy - 6) + ' Q' + cx + ' ' + (hy - 12) + ' ' + (cx - 16) + ' ' + (hy - 6) + 'Z" fill="' + cheveux + '"/>';
+        if (v === 0) { s += '<path d="M' + (cx - 13) + ' ' + (hy - 8) + ' Q' + cx + ' ' + (hy - 16) + ' ' + (cx + 13) + ' ' + (hy - 8) + '" fill="none" stroke="#e7c77b" stroke-width="2"/><circle cx="' + cx + '" cy="' + (hy - 13) + '" r="3" fill="#7fe0c4"/>'; }
+        if (v === 1) { s += '<path d="M' + (cx - 12) + ' ' + (hy - 12) + ' q4 -10 10 -4 q4 -8 12 0" fill="none" stroke="#58bf7b" stroke-width="3" stroke-linecap="round"/>'; }
+        if (v === 2) { s += '<path d="M' + (cx + 15) + ' ' + (hy + 6) + ' Q' + (cx + 26) + ' ' + (hy + 30) + ' ' + (cx + 20) + ' ' + (hy + 56) + '" fill="none" stroke="' + cheveux + '" stroke-width="5" stroke-linecap="round"/>'; }
+      }
+      return s;
+    }
+
+    function scene(p) { /* p = préfixe pour que les dégradés restent uniques */
+      var o = '<svg viewBox="0 0 900 380" role="img" aria-label="Humains et elfes réunis autour d\'une grande table en marbre pour suivre la progression du jeu" xmlns="http://www.w3.org/2000/svg">';
+      o += '<defs>'
+        + '<linearGradient id="' + p + 'fond" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2748"/><stop offset="1" stop-color="#0d1326"/></linearGradient>'
+        + '<linearGradient id="' + p + 'sol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3350"/><stop offset="1" stop-color="#121830"/></linearGradient>'
+        + '<linearGradient id="' + p + 'marbre" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f3ec"/><stop offset="1" stop-color="#c4c9d0"/></linearGradient>'
+        + '<linearGradient id="' + p + 'marbre2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9bfc8"/><stop offset="1" stop-color="#7d8592"/></linearGradient>'
+        + '<radialGradient id="' + p + 'fen" cx="50%" cy="60%" r="60%"><stop offset="0" stop-color="#ffe7a8" stop-opacity=".9"/><stop offset="1" stop-color="#5a79b8" stop-opacity=".35"/></radialGradient>'
+        + '<radialGradient id="' + p + 'lueur" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd98a" stop-opacity=".75"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>'
+        + '</defs>';
+      o += '<rect width="900" height="380" fill="url(#' + p + 'fond)"/>';
+      /* grandes arcades de la salle */
+      var xs = [150, 450, 750];
+      xs.forEach(function (x) {
+        o += '<path d="M' + (x - 85) + ' 250 L' + (x - 85) + ' 90 Q' + x + ' 6 ' + (x + 85) + ' 90 L' + (x + 85) + ' 250Z" fill="#141b34" stroke="#34447a" stroke-width="3"/>';
+        o += '<path d="M' + (x - 62) + ' 250 L' + (x - 62) + ' 100 Q' + x + ' 34 ' + (x + 62) + ' 100 L' + (x + 62) + ' 250Z" fill="url(#' + p + 'fen)"/>';
+        o += '<path d="M' + x + ' 52 L' + x + ' 250 M' + (x - 62) + ' 150 L' + (x + 62) + ' 150" stroke="#2a3a6a" stroke-width="3" opacity=".8"/>';
+      });
+      o += '<rect x="0" y="248" width="900" height="132" fill="url(#' + p + 'sol)"/>';
+      /* colonnes */
+      [20, 300, 600, 880].forEach(function (x) {
+        o += '<rect x="' + (x - 14) + '" y="40" width="28" height="210" fill="#222c52"/><rect x="' + (x - 20) + '" y="34" width="40" height="12" fill="#34447a"/><rect x="' + (x - 20) + '" y="244" width="40" height="10" fill="#34447a"/>';
+      });
+      /* bannières : humains à gauche, elfes à droite */
+      o += '<path d="M62 36 H128 V150 L95 130 L62 150Z" fill="#2c4d8f" stroke="#e7c77b" stroke-width="2"/>';
+      o += '<path d="M95 62 l7 16 l17 2 l-13 11 l4 17 l-15 -9 l-15 9 l4 -17 l-13 -11 l17 -2Z" fill="#e7c77b"/>';
+      o += '<path d="M772 36 H838 V150 L805 130 L772 150Z" fill="#2f7a52" stroke="#d8e6e0" stroke-width="2"/>';
+      o += '<path d="M805 62 C826 78 826 108 805 124 C784 108 784 78 805 62Z" fill="#d8e6e0"/><path d="M805 70 V122" stroke="#2f7a52" stroke-width="2"/>';
+      /* figures derrière la table */
+      [{x:150,v:0},{x:250,v:1},{x:350,v:2}].forEach(function (f) { o += figure(f.x, 282, "humain", f.v); });
+      [{x:550,v:0},{x:650,v:1},{x:750,v:2}].forEach(function (f) { o += figure(f.x, 282, "elfe", f.v); });
+      /* la grande table en marbre */
+      o += '<polygon points="70,272 830,272 876,308 24,308" fill="url(#' + p + 'marbre)" stroke="#9aa3b0" stroke-width="2"/>';
+      o += '<rect x="24" y="308" width="852" height="22" fill="url(#' + p + 'marbre2)"/>';
+      o += '<rect x="76" y="330" width="34" height="42" fill="#8c94a1"/><rect x="790" y="330" width="34" height="42" fill="#8c94a1"/><rect x="438" y="330" width="24" height="42" fill="#8c94a1"/>';
+      o += '<g fill="none" stroke="#8d97a8" stroke-width="1.6" opacity=".55" stroke-linecap="round">'
+        + '<path d="M120 282 C190 288 230 296 300 292 S420 280 470 290"/><path d="M520 284 C600 292 660 298 760 288"/><path d="M200 300 C260 302 300 304 360 300"/><path d="M600 302 C650 300 700 304 800 300"/>'
+        + '<path d="M60 316 C200 318 320 314 460 318 S740 316 850 318" opacity=".5"/></g>';
+      /* parchemin et bougies au centre */
+      o += '<polygon points="410,286 490,286 500,300 400,300" fill="#efe0b8" stroke="#a8925a" stroke-width="1.5"/>';
+      o += '<path d="M418 291 H480 M418 295 H466" stroke="#7a6a3e" stroke-width="1.3" opacity=".8"/>';
+      [{x:385},{x:515}].forEach(function (c) {
+        o += '<circle cx="' + c.x + '" cy="266" r="26" fill="url(#' + p + 'lueur)"/>';
+        o += '<rect x="' + (c.x - 5) + '" y="272" width="10" height="20" rx="2" fill="#f1ead8"/>';
+        o += '<path class="flamme" d="M' + c.x + ' 254 Q' + (c.x + 6) + ' 264 ' + c.x + ' 272 Q' + (c.x - 6) + ' 264 ' + c.x + ' 254Z" fill="#ffb347"/>';
+      });
+      /* torches murales */
+      [{x:210},{x:690}].forEach(function (t) {
+        o += '<circle cx="' + t.x + '" cy="96" r="34" fill="url(#' + p + 'lueur)"/>';
+        o += '<rect x="' + (t.x - 3) + '" y="104" width="6" height="34" fill="#4a3a2a"/>';
+        o += '<path class="flamme" d="M' + t.x + ' 78 Q' + (t.x + 9) + ' 94 ' + t.x + ' 106 Q' + (t.x - 9) + ' 94 ' + t.x + ' 78Z" fill="#ffb347"/>';
+      });
+      o += '</svg>';
+      return o;
+    }
+
+    /* ======================================================================
+       INTRODUCTION (une fois par visite) + bannière permanente
+       ====================================================================== */
+    var intro = document.getElementById("intro");
+    document.getElementById("scene-banniere").innerHTML = scene("b");
+    document.getElementById("scene-intro").innerHTML = scene("i");
+
+    var minuteur = null;
+    function fermerIntro() {
+      if (!intro || intro.classList.contains("fin")) return;
+      clearTimeout(minuteur);
+      intro.classList.add("fin");
+      document.body.classList.remove("intro-actif");
+      try { sessionStorage.setItem("introVue", "1"); } catch (e) {}
+      setTimeout(function () { intro.style.display = "none"; }, 950);
+    }
+    function lancerIntro() {
+      intro.style.display = "flex";
+      intro.classList.remove("fin");
+      document.body.classList.add("intro-actif");
+      /* on relance les animations du brouillard */
+      var clone = intro.cloneNode(true);
+      intro.parentNode.replaceChild(clone, intro);
+      intro = clone;
+      document.getElementById("passer").addEventListener("click", fermerIntro);
+      intro.addEventListener("click", fermerIntro);
+      minuteur = setTimeout(fermerIntro, 4600);
+    }
+    var vue = null; try { vue = sessionStorage.getItem("introVue"); } catch (e) {}
+    var calme = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (vue || calme) {
+      intro.style.display = "none";
+    } else {
+      document.body.classList.add("intro-actif");
+      document.getElementById("passer").addEventListener("click", fermerIntro);
+      intro.addEventListener("click", fermerIntro);
+      minuteur = setTimeout(fermerIntro, 4600);
+    }
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") fermerIntro(); });
+    document.getElementById("revoir").addEventListener("click", function () {
+      window.scrollTo(0, 0);
+      if (calme) return;
+      lancerIntro();
+    });
+
+    /* ======================================================================
+       CHOIX DU PEUPLE ET DE L'ÂGE
+       ====================================================================== */
+    var sel = document.getElementById("age");
+    var o0 = document.createElement("option");
+    o0.value = ""; o0.textContent = "— Choisir mon âge —"; sel.appendChild(o0);
+    for (var n = 1; n <= 25; n++) {
+      var o = document.createElement("option");
+      o.value = String(n);
+      o.textContent = "Âge " + n + (AGES[n] ? " — " + AGES[n].nom : " — premiers âges");
+      sel.appendChild(o);
+    }
+    var radios = document.querySelectorAll('input[name="peuple"]');
+    var ornements = document.querySelectorAll(".ornements span");
+    var legende = document.getElementById("legende");
+    var LEGENDE_DEFAUT = "Humains et elfes réunis pour suivre la progression du jeu.";
+
+    function appliquer() {
+      var peuple = "", age = sel.value;
+      radios.forEach(function (r) { if (r.checked) peuple = r.value; });
+      document.body.setAttribute("data-peuple", peuple);
+      document.body.setAttribute("data-age", age);
+      var theme = null;
+      if (age && AGES[age]) theme = AGES[age];
+      else if (age && DEBUT[peuple]) theme = DEBUT[peuple];
+      else if (peuple) theme = DEBUT[peuple];
+      var fondRef = peuple === "elfe" ? "#0e1d19" : "#101827";
+      var couleur = theme ? lisible(theme.couleur, fondRef) : COULEUR_DEFAUT;
+      document.documentElement.style.setProperty("--or", couleur);
+      document.documentElement.style.setProperty("--bordure", "rgba(" +
+        parseInt(couleur.substr(1, 2), 16) + "," + parseInt(couleur.substr(3, 2), 16) + "," + parseInt(couleur.substr(5, 2), 16) + ",.32)");
+      var orn = theme ? theme.orn : ["🏰", "🍃", "⚜️"];
+      ornements.forEach(function (s, i) { s.textContent = orn[i % orn.length]; });
+      var txt = LEGENDE_DEFAUT;
+      if (peuple && age && AGES[age]) txt = (peuple === "elfe" ? "Peuple elfe" : "Peuple humain") + " · âge " + age + " : " + AGES[age].nom + ".";
+      else if (peuple && age) txt = (peuple === "elfe" ? "Peuple elfe" : "Peuple humain") + " · âge " + age + " : les premiers âges.";
+      else if (peuple) txt = (peuple === "elfe" ? "Vous jouez les Elfes." : "Vous jouez les Humains.") + " Choisissez aussi votre âge pour compléter l'ambiance.";
+      legende.textContent = txt;
+      ecrire("assistants.peuple", peuple); ecrire("assistants.age", age);
+    }
+    radios.forEach(function (r) { r.addEventListener("change", appliquer); });
+    sel.addEventListener("change", appliquer);
+
+    var sp = lire("assistants.peuple"), sa = lire("assistants.age");
+    if (sp === "humain" || sp === "elfe") radios.forEach(function (r) { r.checked = (r.value === sp); });
+    if (sa && /^\d+$/.test(sa) && +sa >= 1 && +sa <= 25) sel.value = sa;
+    appliquer();
+  })();
+  </script>
+
+  <script data-goatcounter="https://assistants-elvenar.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
