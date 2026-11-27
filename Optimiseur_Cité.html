@@ -91,6 +91,7 @@ body{overflow:hidden;touch-action:none;font-family:sans-serif}
 <label class="chk"><input type="checkbox" id="chkNext" checked> Niv. suivant</label>
 <label class="chk"><input type="checkbox" id="chkHide" checked> Masquer non conf.</label>
 <label class="chk"><input type="checkbox" id="chkLabels" checked> Noms</label>
+<label class="chk" title="Sélection multiple : un clic ajoute ou retire un bâtiment de la sélection (sur ordinateur : Ctrl ou Maj + clic)"><input type="checkbox" id="chkMulti"> ☑ Multi</label>
 <label class="chk" title="Petit triangle blanc dans le coin d'un bâtiment qui n'a pas besoin d'être relié à une rue : il peut être placé n'importe où."><input type="checkbox" id="chkFree" checked> ◥ Sans rue</label>
 <span class="stat" id="stats"></span>
 </div>
@@ -99,6 +100,13 @@ body{overflow:hidden;touch-action:none;font-family:sans-serif}
 <h3>Bâtiments & Rails</h3>
 <button id="btnAddFromList" style="width:100%;margin-bottom:8px;padding:6px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">➕ Ajouter un nouveau bâtiment</button>
 <div id="listItems" style="margin-top:6px;"></div>
+</div>
+<div id="multiBar" style="display:none;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:#142039;border:1px solid #3a5a8a;padding:8px 12px;border-radius:8px;z-index:60;align-items:center;gap:8px;color:#fff;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.5);flex-wrap:wrap;max-width:96vw">
+<b id="multiInfo"></b>
+<label>Niveau <input id="multiLevel" type="number" min="1" max="35" value="2" style="width:56px"></label>
+<button id="multiApply">Appliquer ce niveau</button>
+<button id="multiPlus">+1 niveau</button>
+<button id="multiClear">✕ Désélectionner</button>
 </div>
 <div id="panel">
 <button id="btnClosePanel">✕</button>
@@ -445,7 +453,7 @@ function loadCity(data,savedConfigs,savedPositions,savedRoadList,savedAreas,save
  const entities=findEntities(data)||[];
  if(!entities.length&&!(savedAdded&&savedAdded.length))throw new Error("Aucun bâtiment trouvé dans ces données (format non reconnu).");
  buildings=[]; types={}; undoStack=[]; updateUndoBtn();
- selectedBuilding=null;selectedType=null;highlightedType=null;panel.style.display='none';
+ selectedBuilding=null;selectedType=null;highlightedType=null;panel.style.display='none';multiSel.clear();
  const usedIds=new Set();
 
  for(let i = 0; i < entities.length; i++){
@@ -623,9 +631,11 @@ document.getElementById('btnSaveType').onclick=()=>{
  const same=buildings.filter(b=>b.entityId===selectedType);
  const cible=all?same:[(selectedBuilding&&selectedBuilding.entityId===selectedType)?selectedBuilding:same[0]].filter(Boolean);
  for(const b of same){b.name=t.name;b.family=t.family;b.needsRoad=t.needsRoad;if(b.type==='custom')b.isRoad=(b.family==='Rue'||b.family===CHEMIN);b.color=colorForBuilding(b)}
+ const olds=cible.map(b=>({b:b,w:b.w,h:b.h,level:b.level}));
  for(const b of cible){b.level=nl;b.locked=lk;b.w=w;b.h=h;b.temp=tp;b.startDate=sd;b.duration=du;b.color=colorForBuilding(b)}
+ const tailleOk=postResize(olds);
  // la taille d'un niveau est retenue : un nouvel import redonne la bonne taille à chaque niveau
- t.sizes=t.sizes||{};t.sizes[nl]={w:w,h:h};
+ t.sizes=t.sizes||{};if(tailleOk)t.sizes[nl]={w:w,h:h};
  if(all||same.length<=1){t.w=w;t.h=h;t.locked=lk;t.temp=tp;t.startDate=sd;t.duration=du;t.level=nl}
  t.configured=true;
  computeGrid();buildList();updateStats();draw();saveToStorage();
@@ -1077,6 +1087,8 @@ function draw(){
   ctx.strokeStyle='#e74c3c';ctx.lineWidth=Math.max(0.12,3/scale);
   ctx.strokeRect(selectedBuilding.x,selectedBuilding.y,selectedBuilding.w,selectedBuilding.h);
  }
+ if(multiSel.size){ctx.strokeStyle='#00e5ff';ctx.lineWidth=Math.max(0.15,3.5/scale);ctx.setLineDash([]);for(const b of multiSel)ctx.strokeRect(b.x,b.y,b.w,b.h)}
+ if(drag&&drag.moved){const hh=hitsBox(drag.b.x,drag.b.y,drag.b.w,drag.b.h,new Set([drag.b]));ctx.strokeStyle='#ff1744';ctx.lineWidth=Math.max(0.12,3/scale);ctx.setLineDash([0.35,0.2]);for(const q of hh)ctx.strokeRect(q.x,q.y,q.w,q.h);ctx.strokeRect(drag.b.x,drag.b.y,drag.b.w,drag.b.h);ctx.setLineDash([])}
  ctx.restore();
 
  const showLabels=document.getElementById('chkLabels').checked;
@@ -1160,7 +1172,8 @@ canvas.addEventListener('pointerdown',e=>{
   if(mode==='chemin'&&!document.getElementById('selChemin').value){alert("Aucun chemin d'ensemble n'existe encore : crée-le avec « Ajouter un nouveau bâtiment » (catégorie Chemin d'ensemble).");return}
   painting={mode:mode,pushed:false,changed:false};paintCell(g.x,g.y);return}
  const b=buildingAt(g.x,g.y);
- if(b){drag={b:b,offX:g.x-b.x,offY:g.y-b.y,sx:e.clientX,sy:e.clientY,moved:false,pre:b.locked?null:snap()}}
+ if(b&&(e.ctrlKey||e.metaKey||e.shiftKey||document.getElementById('chkMulti').checked)){toggleMulti(b);return}
+ if(b){drag={b:b,offX:g.x-b.x,offY:g.y-b.y,x0:b.x,y0:b.y,sx:e.clientX,sy:e.clientY,moved:false,pre:b.locked?null:snap()}}
  else{pan={sx:e.clientX,sy:e.clientY,ox:offsetX,oy:offsetY,click:true}}
 });
 canvas.addEventListener('pointermove',e=>{
@@ -1172,8 +1185,8 @@ canvas.addEventListener('pointermove',e=>{
  }
  if(painting){paintCell(g.x,g.y);return}
  if(drag){
-  if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>4){drag.moved=true;if(drag.pre)pushRaw(drag.pre)}
-  if(drag.moved&&!drag.b.locked){const nx=g.x-drag.offX,ny=g.y-drag.offY;if(!overlapsOthers(drag.b,nx,ny)){drag.b.x=nx;drag.b.y=ny}draw()}
+  if(!drag.moved&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>4){drag.moved=true;if(drag.pre)pushRaw(drag.pre);const ix2=buildings.indexOf(drag.b);if(ix2>=0&&!drag.b.locked){buildings.splice(ix2,1);buildings.push(drag.b)}}
+  if(drag.moved&&!drag.b.locked){drag.b.x=g.x-drag.offX;drag.b.y=g.y-drag.offY;draw()}   /* on peut passer au-dessus des autres : la règle s'applique au dépôt */
   return;
  }
  const b=buildingAt(g.x,g.y);
@@ -1198,7 +1211,15 @@ function endPointer(){
    selectedType=d.b.entityId;selectedBuilding=d.b;highlightedType=d.b.entityId;
    if(document.getElementById('chkPanel').checked)openPanel(d.b.entityId);
    buildList();draw();
-  }else if(!d.b.locked){computeGrid();draw();saveToStorage()}
+  }else if(!d.b.locked){
+   const hits=hitsBox(d.b.x,d.b.y,d.b.w,d.b.h,new Set([d.b]));let msg='';
+   if(hits.length){
+    const bloque=hits.filter(isFixedBuilding);
+    if(bloque.length){d.b.x=d.x0;d.b.y=d.y0;msg='⛔ Impossible : « '+bloque[0].name+' » est verrouillé : le bâtiment revient à sa place.'}
+    else{chase(hits);msg='🔁 « '+d.b.name+' » prend la place de '+nomsListe(hits,4)+' (mis en réserve à droite de la carte). Annuler (↩) pour revenir en arrière.'}
+   }
+   computeGrid();buildList();updateStats();draw();saveToStorage();if(msg)flash(msg);
+  }
  }
 }
 canvas.addEventListener('pointerup',endPointer);
@@ -1989,6 +2010,72 @@ async function improveSA(roadMovable,budgetMs,onTick){
  return {positions,roadCells,moved:positions.size,roadsBefore:startCost,iterations:it,accepted:acc,ms:Date.now()-t0};
 }
 
+/* ---------- COMBLER LES TROUS (« Fill Gaps ») : les bâtiments SANS RUE (triangle blanc) sont déplacés dans les petits trous,
+   ce qui libère ailleurs un grand bloc d'un seul tenant. Le plan est jugé sur la place libre (bloc), pas sur les rues. ---------- */
+async function improveFillGaps(roadMovable,roadKeep,budgetMs){
+ const t0=Date.now();
+ if(!unlockedCells.size)return null;
+ let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+ for(const k of unlockedCells){const c=k.split(',');const x=+c[0],y=+c[1];if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y}
+ const W=maxX-minX+1,H=maxY-minY+1,N=W*H;
+ const ix=(x,y)=>(x<minX||x>maxX||y<minY||y>maxY)?-1:(y-minY)*W+(x-minX);
+ const zone=new Uint8Array(N);for(const k of unlockedCells){const c=k.split(',');zone[ix(+c[0],+c[1])]=1}
+ const occ=new Uint8Array(N);
+ const rmIds=new Set(roadMovable.map(r=>r.id));
+ const mark=(b,x,y,v)=>{for(let i=0;i<b.w;i++)for(let j=0;j<b.h;j++){const k=ix(x+i,y+j);if(k>=0)occ[k]=v}};
+ for(const b of buildings){if(rmIds.has(b.id))continue;mark(b,b.x,b.y,1)}
+ for(const k of roadKeep){const c=k.split(',');const i=ix(+c[0],+c[1]);if(i>=0)occ[i]=1}
+ const inZoneB=(b)=>{for(let i=0;i<b.w;i++)for(let j=0;j<b.h;j++){const k=ix(b.x+i,b.y+j);if(k<0||!zone[k])return false}return true};
+ const mobile=buildings.filter(b=>!rmIds.has(b.id)&&noRoadNeeded(b)&&!isFixedBuilding(b)&&inZoneB(b));
+ const pos=new Map();for(const b of mobile)pos.set(b.id,{x:b.x,y:b.y});
+ const nbr=(k,o)=>{o.length=0;const x=k%W,y=(k/W)|0;if(x>0)o.push(k-1);if(x<W-1)o.push(k+1);if(y>0)o.push(k-W);if(y<H-1)o.push(k+W)};
+ const seen=new Int32Array(N),stack=[],nb=[];let stamp=0;
+ const hts=new Int32Array(W);
+ const score=()=>{ // somme des carrés des zones libres (favorise UN gros bloc) + plus grand rectangle libre
+  stamp++;let sq=0;
+  for(let k=0;k<N;k++){if(!zone[k]||occ[k]||seen[k]===stamp)continue;let n=0;stack.length=0;stack.push(k);seen[k]=stamp;
+   while(stack.length){const c=stack.pop();n++;nbr(c,nb);for(const m of nb)if(zone[m]&&!occ[m]&&seen[m]!==stamp){seen[m]=stamp;stack.push(m)}}
+   sq+=n*n}
+  let best=0;hts.fill(0);
+  for(let y=0;y<H;y++){for(let x=0;x<W;x++){const k=y*W+x;hts[x]=(zone[k]&&!occ[k])?hts[x]+1:0}
+   const st=[];for(let x=0;x<=W;x++){const cur=x===W?0:hts[x];let start=x;
+    while(st.length&&st[st.length-1][1]>=cur){const s=st.pop();const a=(x-s[0])*s[1];if(a>best)best=a;start=s[0]}st.push([start,cur])}}
+  return sq+60*best;
+ };
+ const touches=(b,x,y)=>{ // le bâtiment doit être collé à quelque chose (bord de zone ou case occupée) : on aligne, on ne le laisse pas flotter
+  for(let i=0;i<b.w;i++){for(const yy of [y-1,y+b.h]){const k=ix(x+i,yy);if(k<0||!zone[k]||occ[k])return true}}
+  for(let j=0;j<b.h;j++){for(const xx of [x-1,x+b.w]){const k=ix(xx,y+j);if(k<0||!zone[k]||occ[k])return true}}
+  return false};
+ for(const b of mobile)mark(b,b.x,b.y,1);
+ const before=score();let cur=before,moves=0,improvedPass=true,pass=0,lastYield=Date.now();
+ while(improvedPass&&pass<8&&Date.now()-t0<budgetMs){
+  improvedPass=false;pass++;
+  for(const b of shuffleArr(mobile.slice())){
+   if(Date.now()-t0>=budgetMs)break;
+   const p=pos.get(b.id);mark(b,p.x,p.y,0);
+   let best=null,bestS=cur;   /* on ne retient un emplacement que s'il fait MIEUX que la situation actuelle */
+   for(let y=minY;y<=maxY-b.h+1;y++)for(let x=minX;x<=maxX-b.w+1;x++){
+    if(x===p.x&&y===p.y)continue;
+    let ok=true;for(let i=0;i<b.w&&ok;i++)for(let j=0;j<b.h;j++){const k=ix(x+i,y+j);if(!zone[k]||occ[k]){ok=false;break}}
+    if(!ok||!touches(b,x,y))continue;
+    mark(b,x,y,1);const s=score();mark(b,x,y,0);
+    if(s>bestS){bestS=s;best={x:x,y:y}}
+   }
+   if(best){pos.set(b.id,best);mark(b,best.x,best.y,1);cur=bestS;moves++;improvedPass=true}
+   else mark(b,p.x,p.y,1);
+   if(Date.now()-lastYield>40){lastYield=Date.now();await new Promise(r=>setTimeout(r,0))}
+  }
+ }
+ const positions=new Map();
+ for(const b of mobile){const p=pos.get(b.id);if(p.x!==b.x||p.y!==b.y)positions.set(b.id,p)}
+ // contrôle final : aucune superposition, tout dans la zone
+ const used=new Uint8Array(N);let bad=false;
+ for(const b of buildings){if(rmIds.has(b.id))continue;const p=positions.get(b.id)||{x:b.x,y:b.y};for(let i=0;i<b.w;i++)for(let j=0;j<b.h;j++){const k=ix(p.x+i,p.y+j);if(k<0){if(positions.has(b.id))bad=true;continue}if(used[k])bad=true;used[k]=1;if(positions.has(b.id)&&!zone[k])bad=true}}
+ for(const k of roadKeep){const c=k.split(',');const i=ix(+c[0],+c[1]);if(i>=0){if(used[i])bad=true;used[i]=1}}
+ if(bad)return null;
+ return {positions:positions,moved:positions.size,candidats:mobile.length,passes:pass,ms:Date.now()-t0};
+}
+
 async function buildGlobalOptimization(onProgress){
  const roads=buildings.filter(isRoadForOptim);
  const nonRoad=buildings.filter(b=>!isRoadForOptim(b));
@@ -2152,6 +2239,20 @@ async function buildGlobalOptimization(onProgress){
     freeBefore:freeBefore,freeAfter:freeBefore+(roadsInZone-loc.roadCells.length),emprise:0,score:-2,baseRues:K});
   }
  }
+ /* COMBLER LES TROUS : les bâtiments sans rue vont dans les trous pour libérer un bloc (proposé seulement si ça forme un bloc, voir l'analyse de la place libre) */
+ {
+  const clean=scenarios.find(x=>x.kind==='nettoyage');
+  const keep=clean?clean.roadCells:roadMovable.map(r=>r.x+','+r.y);
+  let fg=null;
+  try{fg=await improveFillGaps(roadMovable,keep,4000)}catch(e){console.error(e)}
+  if(onProgress)onProgress(7,8);
+  if(fg&&fg.moved>0){
+   const roadsInZone3=roadMovable.filter(r=>unlockedCells.has(r.x+','+r.y)).length;
+   scenarios.push({kind:'remaniement',local:true,fill:true,positions:fg.positions,roadCells:keep,railCells:[],unplaced:[],keepRails:true,moved:fg.moved,
+    roadTilesNeeded:keep.length,roadTilesAvailable:stockTiles,railTilesNeeded:0,railTilesAvailable:0,ensemble:false,reserve:null,reserveAsked:false,unservedFixed:0,
+    freeBefore:freeBefore,freeAfter:freeBefore+(roadsInZone3-keep.length),emprise:0,score:-1,baseRues:K});
+  }
+ }
  /* RECUIT SIMULÉ : proposé seulement s'il économise au moins 5 rues de plus que la meilleure autre proposition (sinon déplacer beaucoup de bâtiments pour presque rien n'a pas d'intérêt) */
  let sa=null;
  try{sa=await improveSA(roadMovable,4000,(e,b)=>{if(onProgress)onProgress(e,b)})}catch(e){console.error(e)}
@@ -2234,6 +2335,91 @@ function applyScenario(sc){
  document.getElementById('scenarioModal').style.display='none';document.getElementById('previewBar').style.display='none';optimizerSession=null;window.__preview=false;saveToStorage();
  flash('⚡ Remaniement appliqué : '+sc.moved+' bâtiment(s) déplacé(s). '+(res.stock?res.stock+' rue(s) en stock à droite de la carte (hors de la cité).':'Aucune rue en trop : le plan utilise toutes tes rues.'));
 }
+/* ---------- TAILLE PAR NIVEAU : surfaces tirées du classeur « Ma Ville » (123 bâtiments) ---------- */
+const SURFACES_NIVEAU={"manufacture acier":{"1":4,"2":4,"3":4,"4":4,"5":6,"6":6,"7":6,"8":6,"9":9,"10":9,"11":9,"12":9,"13":9,"14":9,"15":9,"16":15,"17":15,"18":15,"19":15,"20":18,"21":18,"22":18,"23":18,"24":20,"25":20,"26":20,"27":20,"28":25,"29":25,"30":25,"31":25,"32":24,"33":24,"34":24,"35":24},"portail orc":{"1":12,"2":15,"3":20,"4":24},"mine granit":{"1":6,"2":6,"3":6,"4":6},"ferme champignons":{"1":4,"2":4,"3":4,"4":4},"fonderie cuivre":{"1":6,"2":6,"3":6,"4":6},"aiguilles tempete":{"1":15,"2":15,"3":15,"4":15,"5":15,"6":15,"7":15,"8":15,"9":15,"10":15,"11":15,"12":15,"13":15,"14":15,"15":15,"16":15,"17":15,"18":15,"19":15,"20":15,"21":15,"22":15,"23":15,"24":15,"25":15,"26":15,"27":15,"28":15,"29":15,"30":15,"31":15,"32":15,"33":15,"34":15,"35":15},"manufacture cristal":{"1":6,"2":6,"3":6,"4":6,"5":6,"6":6,"7":9,"8":9,"9":9,"10":9,"11":12,"12":12,"13":12,"14":12,"15":12,"16":16,"17":16,"18":16,"19":16,"20":20,"21":20,"22":20,"23":20,"24":24,"25":24,"26":24,"27":24,"28":28,"29":28,"30":28,"31":28,"32":30,"33":30,"34":30,"35":30},"marchand":{"1":12},"point ralliement orcs":{"1":35,"2":35,"3":35,"4":35},"portail fees":{"1":4,"2":9,"3":16,"4":25},"monastere martial":{"1":25,"2":25,"3":25,"4":25,"5":25,"6":25,"7":25,"8":25,"9":25,"10":25,"11":25,"12":25,"13":25,"14":25,"15":25,"16":25,"17":25,"18":25,"19":25,"20":25,"21":25,"22":25,"23":25,"24":25,"25":25,"26":25,"27":25,"28":25,"29":25,"30":25},"manufacture soie":{"1":6,"2":6,"3":6,"4":9,"5":9,"6":9,"7":9,"8":12,"9":12,"10":12,"11":12,"12":12,"13":12,"14":12,"15":12,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":24,"25":24,"26":24,"27":24,"28":30,"29":30,"30":30,"31":30,"32":30,"33":30,"34":30,"35":30},"clairiere foret":{"1":8,"2":12,"3":15,"4":20},"ferme diurne":{"1":20,"2":20,"3":20,"4":20},"phare cristal":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"manufacture elixir":{"1":12,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":12,"13":24,"14":24,"15":24,"16":24,"17":25,"18":25,"19":25,"20":25,"21":30,"22":30,"23":12,"24":30,"25":30,"26":35,"27":35,"28":35,"29":35,"30":12,"31":16,"32":16,"33":16,"34":16,"35":20},"unites alliees":{"1":1},"armurerie":{"1":4,"2":4,"3":4,"4":4,"5":9,"6":9,"7":9,"8":9,"9":16,"10":16,"11":16,"12":16,"13":16,"14":16,"15":16,"16":20,"17":20,"18":18,"19":18,"20":25,"21":25,"22":25,"23":25,"24":24,"25":24,"26":24,"27":24,"28":21,"29":21,"30":21,"31":21,"32":28,"33":28,"34":28,"35":28,"36":28,"37":28,"38":28,"39":28,"40":25,"41":25,"42":30,"43":30},"atelier":{"1":4,"2":4,"3":4,"4":4,"5":6,"6":6,"7":6,"8":6,"9":12,"10":12,"11":12,"12":12,"13":12,"14":12,"15":12,"16":15,"17":15,"18":18,"19":18,"20":18,"21":18,"22":20,"23":20,"24":20,"25":20,"26":21,"27":21,"28":21,"29":21,"30":24,"31":24,"32":24,"33":24,"34":25,"35":25,"36":30,"37":30,"38":30,"39":30,"40":30,"41":30,"42":30,"43":30,"44":28,"45":28},"usine dessalement":{"1":42,"2":42},"ferme varech":{"1":40,"2":40},"site peche":{"1":42,"2":42},"canyon fossiles":{"1":42,"2":42},"baie baleines":{"1":64,"2":64,"3":64,"4":64},"atelier horde diabhal":{"1":15,"2":20,"3":25,"4":30},"ateliers valloriens":{"1":16,"2":20,"3":24,"4":28},"tour dragon vallorien":{"1":21,"2":35,"3":49,"4":63},"fabricant tambours":{"1":16},"fabricant flutes":{"1":15},"fabricant violons":{"1":15},"bosquet harmonie":{"1":25,"2":36,"3":49,"4":64},"tour tenebres":{"1":16},"tour lumiere":{"1":16},"forteresse vengeance":{"1":54,"2":54,"3":54,"4":54},"foyer terre":{"1":30,"2":30,"3":30},"foyer lair":{"1":28,"2":28,"3":28},"foyer feu":{"1":28,"2":28,"3":28},"foyer deau":{"1":30,"2":30,"3":30},"place accueils":{"1":9},"portail dimensionnel":{"1":30,"2":36,"3":42,"4":49},"centre negoce":{"1":64,"2":64,"3":64,"4":64},"flotte collectionneurs":{"1":36},"flotte gourmets":{"1":36},"flotte pirates":{"1":36},"senat":{"1":64,"2":64,"3":64,"4":64},"coffre sagesse":{"1":24,"2":24,"3":24,"4":24},"usine":{"1":28},"agriculture":{"1":28},"galerie":{"1":28},"academie":{"1":25,"2":25,"3":25,"4":25},"salle conseil":{"1":64,"2":64,"3":64,"4":64},"d004 w zoo":{"1":20,"2":20,"3":20,"4":20},"d003 r assemblage":{"1":24,"2":24,"3":24,"4":24},"d002 jardin":{"1":28,"2":28,"3":28,"4":28},"d001 o moteur":{"1":30,"2":30,"3":30,"4":30},"ile centrale":{"1":56,"2":56,"3":56,"4":56},"fabriquant pieges":{"1":25,"2":25,"3":25,"4":25},"orfevrerie":{"1":25,"2":25,"3":25,"4":25},"monuments portail":{"1":8},"temple dunes":{"1":24,"2":35,"3":48,"4":63},"manifestation eau":{"1":18,"2":18,"3":18},"manifestation terre":{"1":16,"2":16,"3":16},"manifestation feu":{"1":24,"2":24,"3":24},"manifestation air":{"1":24,"2":24,"3":24},"portail elements":{"1":40,"2":48,"3":56,"4":64},"ferme halfelins":{"1":9,"2":9,"3":9,"4":9},"bosquet printanier":{"1":6,"2":12,"3":20,"4":30},"faculte necromancie":{"1":25,"2":25,"3":25,"4":25},"faculte alchimie":{"1":16,"2":16,"3":16,"4":16},"faculte arcanes":{"1":24,"2":24,"3":24,"4":24},"campus":{"1":49,"2":64,"3":81,"4":100},"raffinerie planches":{"1":9},"raffinerie acier":{"1":6},"raffinerie marbre":{"1":6},"fabrication forestiere":{"1":16,"2":16,"3":16,"4":16},"ferme nocturne":{"1":14,"2":14,"3":14,"4":14},"rues races invitees":{"1":1},"rues":{"1":1},"portail nains":{"1":4,"2":9,"3":16,"4":25},"ecole sorcellerie vallorienn":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"boutique antiquites madame":{"1":15,"2":15,"3":15,"4":15,"5":15,"6":15,"7":15,"8":15,"9":15,"10":15,"11":15,"12":15,"13":15,"14":15,"15":15,"16":15,"17":15,"18":15,"19":15,"20":15,"21":15,"22":15,"23":15,"24":15,"25":15,"26":15,"27":15,"28":15,"29":15,"30":15,"31":15,"32":15,"33":15,"34":15,"35":15},"taverne explorateurs":{"1":15,"2":15,"3":15,"4":15,"5":15,"6":15,"7":15,"8":15,"9":15,"10":15,"11":15,"12":15,"13":15,"14":15,"15":15,"16":15,"17":15,"18":15,"19":15,"20":15,"21":15,"22":15,"23":15,"24":15,"25":15,"26":15,"27":15,"28":15,"29":15,"30":15,"31":15,"32":15,"33":15,"34":15,"35":15},"lieu repos ancestral":{"1":28,"2":28,"3":28,"4":28,"5":28,"6":28,"7":28,"8":28,"9":28,"10":28,"11":28,"12":28,"13":28,"14":28,"15":28,"16":28,"17":28,"18":28,"19":28,"20":28,"21":28,"22":28,"23":28,"24":28,"25":28,"26":28,"27":28,"28":28,"29":28,"30":28,"31":28,"32":28,"33":28,"34":28,"35":28},"arbre illumination":{"1":12,"2":12,"3":12,"4":12,"5":12,"6":12,"7":12,"8":12,"9":12,"10":12,"11":12,"12":12,"13":12,"14":12,"15":12,"16":12,"17":12,"18":12,"19":12,"20":12,"21":12,"22":12,"23":12,"24":12,"25":12,"26":12,"27":12,"28":12,"29":12,"30":12,"31":12,"32":12,"33":12,"34":12,"35":12},"tour sceau vallorien":{"1":30,"2":30,"3":30,"4":30,"5":30,"6":30,"7":30,"8":30,"9":30,"10":30,"11":30,"12":30,"13":30,"14":30,"15":30,"16":30,"17":30,"18":30,"19":30,"20":30,"21":30,"22":30,"23":30,"24":30,"25":30,"26":30,"27":30,"28":30,"29":30,"30":30,"31":30,"32":30,"33":30,"34":30,"35":30},"temple esprits":{"1":28,"2":28,"3":28,"4":28,"5":28,"6":28,"7":28,"8":28,"9":28,"10":28,"11":28,"12":28,"13":28,"14":28,"15":28,"16":28,"17":28,"18":28,"19":28,"20":28,"21":28,"22":28,"23":28,"24":28,"25":28,"26":28,"27":28,"28":28,"29":28,"30":28,"31":28,"32":28,"33":28,"34":28,"35":28},"autel champions":{"1":12,"2":12,"3":12,"4":12,"5":12,"6":12,"7":12,"8":12,"9":12,"10":12,"11":12,"12":12,"13":12,"14":12,"15":12,"16":12,"17":12,"18":12,"19":12,"20":12,"21":12,"22":12,"23":12,"24":12,"25":12,"26":12,"27":12,"28":12,"29":12,"30":12,"31":12,"32":12,"33":12,"34":12,"35":12},"oracle destin":{"1":25,"2":25,"3":25,"4":25,"5":25,"6":25,"7":25,"8":25,"9":25,"10":25,"11":25,"12":25,"13":25,"14":25,"15":25,"16":25,"17":25,"18":25,"19":25,"20":25,"21":25,"22":25,"23":25,"24":25,"25":25,"26":25,"27":25,"28":25,"29":25,"30":25,"31":25,"32":25,"33":25,"34":25,"35":25},"arche draconique":{"1":20,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":20,"25":20,"26":20,"27":20,"28":20,"29":20,"30":20,"31":20,"32":20,"33":20,"34":20,"35":20},"arene tournoi":{"1":20,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":20,"25":20,"26":20,"27":20,"28":20,"29":20,"30":20,"31":20,"32":20,"33":20,"34":20,"35":20},"bibliotheque donjon":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"fontaine jouvence thermale":{"1":21,"2":21,"3":21,"4":21,"5":21,"6":21,"7":21,"8":21,"9":21,"10":21,"11":21,"12":21,"13":21,"14":21,"15":21,"16":21,"17":21,"18":21,"19":21,"20":21,"21":21,"22":21,"23":21,"24":21,"25":21,"26":21,"27":21,"28":21,"29":21,"30":21,"31":21,"32":21,"33":21,"34":21,"35":21},"vortex stockage":{"1":18,"2":18,"3":18,"4":18,"5":18,"6":18,"7":18,"8":18,"9":18,"10":18,"11":18,"12":18,"13":18,"14":18,"15":18,"16":18,"17":18,"18":18,"19":18,"20":18,"21":18,"22":18,"23":18,"24":18,"25":18,"26":18,"27":18,"28":18,"29":18,"30":18,"31":18,"32":18,"33":18,"34":18,"35":18},"d222 z simia sapiens":{"1":30,"2":30,"3":30,"4":30,"5":30,"6":30,"7":30,"8":30,"9":30,"10":30,"11":30,"12":30,"13":30,"14":30,"15":30,"16":30,"17":30,"18":30,"19":30,"20":30,"21":30,"22":30,"23":30,"24":30,"25":30,"26":30,"27":30,"28":30,"29":30,"30":30,"31":30,"32":30,"33":30,"34":30,"35":30},"d111 a voyage temporel":{"1":18,"2":18,"3":18,"4":18,"5":18,"6":18,"7":18,"8":18,"9":18,"10":18,"11":18,"12":18,"13":18,"14":18,"15":18,"16":18,"17":18,"18":18,"19":18,"20":18,"21":18,"22":18,"23":18,"24":18,"25":18,"26":18,"27":18,"28":18,"29":18,"30":18,"31":18,"32":18,"33":18,"34":18,"35":18},"phare bon entourage":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"pyramide purificatrice":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"fontaines triomphantes":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"tours crepuscule":{"1":21,"2":21,"3":21,"4":21,"5":21,"6":21,"7":21,"8":21,"9":21,"10":21,"11":21,"12":21,"13":21,"14":21,"15":21,"16":21,"17":21,"18":21,"19":21,"20":21,"21":21,"22":21,"23":21,"24":21,"25":21,"26":21,"27":21,"28":21,"29":21,"30":21,"31":21,"32":21,"33":21,"34":21,"35":21},"centre echange elvenar":{"1":25,"2":25,"3":25,"4":25,"5":25,"6":25,"7":25,"8":25,"9":25,"10":25,"11":25,"12":25,"13":25,"14":25,"15":25,"16":25,"17":25,"18":25,"19":25,"20":25,"21":25,"22":25,"23":25,"24":25,"25":25,"26":25,"27":25,"28":25,"29":25,"30":25,"31":25,"32":25,"33":25,"34":25,"35":25},"temple crapauds":{"1":18,"2":18,"3":18,"4":18,"5":18,"6":18,"7":18,"8":18,"9":18,"10":18,"11":18,"12":18,"13":18,"14":18,"15":18,"16":18,"17":18,"18":18,"19":18,"20":18,"21":18,"22":18,"23":18,"24":18,"25":18,"26":18,"27":18,"28":18,"29":18,"30":18,"31":18,"32":18,"33":18,"34":18,"35":18},"abbaye dragon":{"1":20,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":20,"25":20,"26":20,"27":20,"28":20,"29":20,"30":20,"31":20,"32":20,"33":20,"34":20,"35":20},"labyrinthe matiere noire":{"1":30,"2":30,"3":30,"4":30,"5":30,"6":30,"7":30,"8":30,"9":30,"10":30,"11":30,"12":30,"13":30,"14":30,"15":30,"16":30,"17":30,"18":30,"19":30,"20":30,"21":30,"22":30,"23":30,"24":30,"25":30,"26":30,"27":30,"28":30,"29":30,"30":30,"31":30,"32":30,"33":30,"34":30,"35":30},"academie volante":{"1":16,"2":16,"3":16,"4":16,"5":16,"6":16,"7":16,"8":16,"9":16,"10":16,"11":16,"12":16,"13":16,"14":16,"15":16,"16":16,"17":16,"18":16,"19":16,"20":16,"21":16,"22":16,"23":16,"24":16,"25":16,"26":16,"27":16,"28":16,"29":16,"30":16,"31":16,"32":16,"33":16,"34":16,"35":16},"sanctuaire champignons astu":{"1":20,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":20,"25":20,"26":20,"27":20,"28":20,"29":20,"30":20,"31":20,"32":20,"33":20,"34":20,"35":20},"forge heros":{"1":25,"2":25,"3":25,"4":25,"5":25,"6":25,"7":25,"8":25,"9":25,"10":25,"11":25,"12":25,"13":25,"14":25,"15":25,"16":25,"17":25,"18":25,"19":25,"20":25,"21":25,"22":25,"23":25,"24":25,"25":25,"26":25,"27":25,"28":25,"29":25,"30":25,"31":25,"32":25,"33":25,"34":25,"35":25},"guilde marchand prospere":{"1":21,"2":21,"3":21,"4":21,"5":21,"6":21,"7":21,"8":21,"9":21,"10":21,"11":21,"12":21,"13":21,"14":21,"15":21,"16":21,"17":21,"18":21,"19":21,"20":21,"21":21,"22":21,"23":21,"24":21,"25":21,"26":21,"27":21,"28":21,"29":21,"30":21,"31":21,"32":21,"33":21,"34":21,"35":21},"tours prosperite":{"1":20,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":20,"25":20,"26":20,"27":20,"28":20,"29":20,"30":20,"31":20,"32":20,"33":20,"34":20,"35":20},"coeur montagne":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"rempart nain":{"1":28,"2":28,"3":28,"4":28,"5":28,"6":28,"7":28,"8":28,"9":28,"10":28,"11":28,"12":28,"13":28,"14":28,"15":28,"16":28,"17":28,"18":28,"19":28,"20":28,"21":28,"22":28,"23":28,"24":28,"25":28,"26":28,"27":28,"28":28,"29":28,"30":28,"31":28,"32":28,"33":28,"34":28,"35":28},"trones hauts hommes":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24,"7":24,"8":24,"9":24,"10":24,"11":24,"12":24,"13":24,"14":24,"15":24,"16":24,"17":24,"18":24,"19":24,"20":24,"21":24,"22":24,"23":24,"24":24,"25":24,"26":24,"27":24,"28":24,"29":24,"30":24,"31":24,"32":24,"33":24,"34":24,"35":24},"tour guet en ruines":{"1":20,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":20,"25":20,"26":20,"27":20,"28":20,"29":20,"30":20,"31":20,"32":20,"33":20,"34":20,"35":20},"excavation sans fin":{"1":20,"2":20,"3":20,"4":20,"5":20,"6":20,"7":20,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":20,"25":20,"26":20,"27":20,"28":20,"29":20,"30":20,"31":20,"32":20,"33":20,"34":20,"35":20},"tome mysteres":{"1":16,"2":16,"3":16,"4":16,"5":16,"6":16,"7":16,"8":16,"9":16,"10":16,"11":16,"12":16,"13":16,"14":16,"15":16,"16":16,"17":16,"18":16,"19":16,"20":16,"21":16,"22":16,"23":16,"24":16,"25":16,"26":16,"27":16,"28":16,"29":16,"30":16,"31":16,"32":16,"33":16,"34":16,"35":16},"terrain entrainement":{"1":9,"2":9,"3":9,"4":9,"5":12,"6":12,"7":12,"8":12,"9":15,"10":15,"11":15,"12":15,"13":18,"14":18,"15":18,"16":18,"17":20,"18":20,"19":20,"20":20,"21":24,"22":24,"23":24,"24":24,"25":28,"26":28,"27":28,"28":28,"29":30,"30":30,"31":30,"32":30,"33":30},"camp mercenaires":{"1":16,"2":16,"3":16,"4":16,"5":18,"6":18,"7":18,"8":18,"9":20,"10":20,"11":20,"12":20,"13":24,"14":24,"15":24,"16":24,"17":25,"18":25,"19":25,"20":25,"21":30,"22":30,"23":28,"24":28,"25":30,"26":32},"manufacture gemmes":{"1":12,"2":12,"3":12,"4":16,"5":16,"6":16,"7":16,"8":20,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":24,"21":24,"22":24,"23":24},"manufacture poussiere magique":{"1":12,"2":16,"3":16,"4":16,"5":16,"6":16,"7":16,"8":16,"9":20,"10":20,"11":20,"12":20,"13":20,"14":20,"15":20,"16":20,"17":20,"18":20,"19":20,"20":24,"21":24,"22":24,"23":24,"24":25,"25":25,"27":25,"28":30,"29":30,"30":30,"31":30,"32":35,"33":35,"34":35,"35":35},"merveilles antiques secretes":{"1":16,"2":16,"3":16,"4":16,"5":16,"6":16,"7":16,"8":16,"9":16,"10":16,"11":16,"12":16,"13":16,"14":16,"15":16,"16":16,"17":16,"18":16,"19":16,"20":16,"21":16,"22":16,"23":16,"24":16,"25":16,"26":16,"27":16,"28":16,"29":16,"30":16,"31":16,"32":16,"33":16,"34":16,"35":16},"abysse dore":{"1":9,"2":9,"3":9,"4":9,"5":9,"6":9,"7":9,"8":9,"9":9,"10":9,"11":9,"12":9,"13":9,"14":9,"15":9,"16":9,"17":9,"18":9,"19":9,"20":9,"21":9,"22":9,"23":9,"24":9,"25":9,"26":9,"27":9,"28":9,"29":9,"30":9,"31":9,"32":9,"33":9,"34":9,"35":9},"residence":{"1":4,"2":4,"3":4,"4":6,"5":6,"6":6,"7":6,"8":9,"9":9,"10":9,"11":9,"12":9,"13":9,"14":9,"15":9,"16":8,"17":8,"18":8,"19":8,"20":12,"21":12,"22":12,"23":12,"24":15,"25":15,"26":15,"27":15,"28":16,"29":16,"30":16,"31":16,"32":15,"33":15,"34":15,"35":15,"36":20,"37":20,"38":20,"39":20,"40":20,"41":20,"42":24,"43":24,"44":24,"45":24},"manufacture bois":{"1":2,"2":2,"3":2,"4":2,"5":2,"6":2,"7":4,"8":4,"9":4,"10":4,"11":6,"12":6,"13":6,"14":6,"15":6,"16":10,"17":10,"18":10,"19":10,"20":18,"21":18,"22":18,"23":18,"24":20,"25":20,"26":20,"27":20,"28":25,"29":25,"30":25,"31":25,"32":24,"33":24,"34":24,"35":24},"manufacture parchemins":{"1":9,"2":9,"3":9,"4":9,"5":9,"6":12,"7":12,"8":12,"9":12,"10":16,"11":16,"12":16,"13":16,"14":16,"15":16,"16":20,"17":20,"18":20,"19":20,"20":20,"21":20,"22":20,"23":20,"24":24,"25":24,"26":24,"27":24,"28":30,"29":30,"30":30,"31":30}};
+const MOTS_VIDES_NOM=new Set(['de','du','des','la','le','les','l','d','et','aux','au']);
+function normNom(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w&&!MOTS_VIDES_NOM.has(w)).join(' ')}
+/* Taille d'un bâtiment à un niveau donné : 1) la taille déjà enregistrée dans la fiche, 2) sinon la surface du classeur (si la surface ne change pas, on garde la taille ; sinon on cherche le rectangle le plus proche de l'actuel : « estimée », à vérifier). */
+function tailleNiveau(t,b,level){
+ if(t&&t.sizes&&t.sizes[level])return {w:t.sizes[level].w,h:t.sizes[level].h,source:'fiche',estimee:false};
+ const tab=SURFACES_NIVEAU[normNom(t&&t.name)];const a=tab&&tab[String(level)];
+ if(!a)return null;
+ if(b.w*b.h===a)return {w:b.w,h:b.h,source:'classeur',estimee:false};
+ let best=null;
+ for(let w=1;w<=a;w++){if(a%w)continue;const h=a/w;
+  const cout=Math.abs(w-b.w)+Math.abs(h-b.h)+(Math.max(w,h)>2.5*Math.min(w,h)?5:0);
+  if(!best||cout<best.c)best={w:w,h:h,c:cout}}
+ return best?{w:best.w,h:best.h,source:'classeur',estimee:true}:null;
+}
+/* ---------- RÈGLE DU JEU : « un clou chasse l'autre » ---------- */
+function hitsBox(x,y,w,h,ignore){const o=[];for(const q of buildings){if(ignore&&ignore.has(q))continue;if(x<q.x+q.w&&x+w>q.x&&y<q.y+q.h&&y+h>q.y)o.push(q)}return o}
+function isFixedBuilding(q){return !!q.locked||q.type==='guardian'||isImmutable(q)}
+function placeInReserve(b){const bd=cityBounds(),sx=bd.maxX+3,me=new Set([b]);
+ for(let y=bd.minY;y<bd.minY+150;y++)for(let x=sx;x<sx+90;x++){if(!hitsBox(x,y,b.w,b.h,me).length){b.x=x;b.y=y;return}}}
+function chase(list){for(const q of list)placeInReserve(q)}
+function nomsListe(list,max){const nb=list.filter(q=>!q.isRoad),nr=list.length-nb.length;const n=nb.slice(0,max||4).map(q=>'« '+q.name+' »');if(nb.length>n.length)n.push('… (+'+(nb.length-n.length)+')');if(nr)n.push(nr+' case(s) de rue');return n.join(', ')}
+/* Après un changement de taille : si le bâtiment agrandi touche d'autres bâtiments, ils sont mis en réserve (avec confirmation) ; impossible si l'un d'eux est verrouillé. Renvoie true si tout est appliqué. */
+function postResize(olds){
+ const members=new Set(olds.map(o=>o.b)),chaseMap=new Map();let refus=[];
+ for(const o of olds){
+  if(o.w===o.b.w&&o.h===o.b.h)continue;
+  const hits=hitsBox(o.b.x,o.b.y,o.b.w,o.b.h,members);if(!hits.length)continue;
+  if(hits.some(isFixedBuilding)){o.b.w=o.w;o.b.h=o.h;o.b.level=o.level;refus.push(o.b.name);continue}
+  for(const h of hits)chaseMap.set(h,h);
+ }
+ const list=[...chaseMap.keys()];
+ if(list.length){
+  if(confirm('Avec sa nouvelle taille, le bâtiment prend la place de : '+nomsListe(list,6)+'.\nCes éléments seront mis en réserve à droite de la carte (rien n\'est supprimé).\n\nOK = remplacer · Annuler = garder l\'ancienne taille')){chase(list)}
+  else{for(const o of olds){if(hitsBox(o.b.x,o.b.y,o.b.w,o.b.h,members).length){o.b.w=o.w;o.b.h=o.h;o.b.level=o.level}}return false}
+ }
+ if(refus.length){alert('Taille non appliquée (chevauche un bâtiment verrouillé) : '+refus.join(', '));return false}
+ return true;
+}
+/* ---------- SÉLECTION MULTIPLE (Ctrl/Maj + clic, ou case « Multi ») : changer le niveau de plusieurs bâtiments d'un coup ---------- */
+const multiSel=new Set();
+function updateMultiBar(){
+ for(const b of [...multiSel])if(!buildings.includes(b))multiSel.delete(b);
+ const bar=document.getElementById('multiBar');if(!bar)return;
+ if(!multiSel.size){bar.style.display='none';return}
+ bar.style.display='flex';
+ document.getElementById('multiInfo').textContent=multiSel.size+' bâtiment(s) sélectionné(s)';
+ if(!bar.dataset.lv||bar.dataset.n!==String(multiSel.size)){const mn=Math.min.apply(null,[...multiSel].map(b=>b.level||1));document.getElementById('multiLevel').value=Math.min(35,mn+1);bar.dataset.lv='1';bar.dataset.n=String(multiSel.size)}
+}
+function toggleMulti(b){if(!b||b.isRoad)return;if(multiSel.has(b))multiSel.delete(b);else multiSel.add(b);updateMultiBar();draw()}
+function applyLevelBatch(list,mode,val){
+ if(!list.length)return;
+ const pre=snap(),members=new Set(list),plan=[];
+ for(const b of list){
+  const nl=Math.max(1,Math.min(35,mode==='plus'?(b.level||1)+1:val));
+  const t=types[b.entityId],sz=t?tailleNiveau(t,b,nl):null;
+  plan.push({b:b,nl:nl,nw:sz?sz.w:b.w,nh:sz?sz.h:b.h,sz:sz,ok:true,raison:''});
+ }
+ const chaseMap=new Map();
+ for(const p of plan){
+  for(const q of plan){if(q===p)continue;if(p.b.x<q.b.x+q.nw&&p.b.x+p.nw>q.b.x&&p.b.y<q.b.y+q.nh&&p.b.y+p.nh>q.b.y){p.ok=false;p.raison='chevauche un autre bâtiment sélectionné'}}
+  if(!p.ok)continue;
+  const hits=hitsBox(p.b.x,p.b.y,p.nw,p.nh,members);
+  if(hits.some(isFixedBuilding)){p.ok=false;p.raison='chevauche un bâtiment verrouillé';continue}
+  for(const h of hits)chaseMap.set(h,h);
+ }
+ const toChase=[...chaseMap.keys()];
+ if(toChase.length&&!confirm('Pour agrandir certains bâtiments, il faut mettre en réserve (à droite de la carte) : '+nomsListe(toChase,6)+'.\nRien n\'est supprimé.\n\nOK = remplacer · Annuler = ne rien changer'))return;
+ pushRaw(pre);
+ let n=0;const estimees=[],inconnues=[],refus=[];
+ for(const p of plan){
+  if(!p.ok){refus.push(p.b.name+' ('+p.raison+')');continue}
+  p.b.level=p.nl;p.b.w=p.nw;p.b.h=p.nh;n++;
+  if(!p.sz)inconnues.push(p.b.name);else if(p.sz.estimee)estimees.push(p.b.name+' → '+p.nw+'×'+p.nh);
+ }
+ chase(toChase);
+ computeGrid();buildList();updateStats();draw();saveToStorage();updateMultiBar();
+ let msg='✅ '+n+' bâtiment(s) mis au niveau demandé'+(toChase.length?' ; '+toChase.length+' élément(s) mis en réserve':'')+'.';
+ const det=[];
+ if(estimees.length)det.push('Taille ESTIMÉE à partir du classeur (à vérifier) : '+estimees.join(', '));
+ if(inconnues.length)det.push('Taille du nouveau niveau INCONNUE (taille conservée, à corriger dans la fiche) : '+inconnues.join(', '));
+ if(refus.length)det.push('NON appliqué : '+refus.join(', '));
+ flash(msg);if(det.length)alert(msg+'\n\n'+det.join('\n'));
+}
 /* ---------- MESURE DE LA PLACE LIBRE : un gain de place n'est utile que s'il forme un BLOC ---------- */
 const TAILLES_TEST=[[2,2],[3,3],[3,4],[4,4],[4,5],[5,5],[5,6],[6,6],[6,7],[7,7],[8,8]];
 function freeStats(){
@@ -2301,6 +2487,7 @@ function showOptimizationScenarios(result){
  lastOptimResult=result;optimizerSession={snapshot:snap(),roadFixed:result.roadFixed,roadMovable:result.roadMovable,railMovable:result.railMovable||[]};
  {const baseStats=freeStats();result.baseStats=baseStats;
   for(const sc of result.scenarios){renderScenarioPreview(sc);sc.stats=freeStats();const d=describeBloc(baseStats,sc.stats);sc.blocText=d.txt;sc.verdict=d.verdict}
+  result.scenarios=result.scenarios.filter(sc=>!sc.fill||sc.verdict==='le gain forme un bloc libre'||sc.stats.tiny<baseStats.tiny);
   restoreOptimizerSession(false);}
  const list=document.getElementById('scenarioList'),status=document.getElementById('scenarioStatus'),apply=document.getElementById('btnApplyScenario');
  list.innerHTML='';status.textContent=(result.notes||[]).join(' ');apply.disabled=true;
@@ -2315,7 +2502,7 @@ function showOptimizationScenarios(result){
   const letter=sc.kind==='nettoyage'?'':String.fromCharCode(65+pi);
   const card=document.createElement('div');card.className='scenarioCard';
   const nb=result.scenarios.filter(x=>x.kind!=='nettoyage'&&!x.local&&result.scenarios.indexOf(x)<=i).length;
-  const title=document.createElement('h3');title.textContent=sc.local?'✨ Disposition '+letter+' : '+sc.moved+' bâtiment(s) déplacé(s) contre des rues existantes':(sc.kind==='nettoyage'?'🧹 Retirer seulement les rues inutiles (aucun bâtiment ne bouge)':'Remaniement '+String.fromCharCode(64+nb)+(nb===1?' — le moins de rues':''));
+  const title=document.createElement('h3');title.textContent=sc.fill?'🧩 Disposition '+letter+' : combler les trous — '+sc.moved+' bâtiment(s) sans rue déplacé(s) (inclut le retrait des rues inutiles)':sc.local?'✨ Disposition '+letter+' : '+sc.moved+' bâtiment(s) déplacé(s) contre des rues existantes':(sc.kind==='nettoyage'?'🧹 Retirer seulement les rues inutiles (aucun bâtiment ne bouge)':'Remaniement '+String.fromCharCode(64+nb)+(nb===1?' — le moins de rues':''));
   const desc=document.createElement('p');
   const gain=sc.freeAfter-sc.freeBefore;
   const ecart=sc.roadTilesAvailable-sc.roadTilesNeeded;
@@ -2403,6 +2590,17 @@ try{const saved=localStorage.getItem(SAVE_KEY);if(saved){loadFromParsed(JSON.par
 try{const o=JSON.parse(localStorage.getItem('opt_reserve')||'null');if(o){document.getElementById('optReserve').checked=!!o.on;document.getElementById('optReserveSize').value=o.n||8;document.getElementById('optReserveSize2').textContent=o.n||8}}catch(e){}
 document.getElementById('optReserveSize').addEventListener('input',()=>{document.getElementById('optReserveSize2').textContent=document.getElementById('optReserveSize').value});
 document.getElementById('fFamily').addEventListener('change',()=>{const f=document.getElementById('fFamily').value;if(f===FAM_AUTO)document.getElementById('fRoad').value='false';else if(f===FAM_CULT_RES)document.getElementById('fRoad').value='true'});
+
+document.getElementById('multiApply').onclick=()=>applyLevelBatch([...multiSel],'abs',parseInt(document.getElementById('multiLevel').value)||1);
+document.getElementById('multiPlus').onclick=()=>applyLevelBatch([...multiSel],'plus');
+document.getElementById('multiClear').onclick=()=>{multiSel.clear();updateMultiBar();draw()};
+document.getElementById('fLevel').addEventListener('input',()=>{
+ const sb=selectedBuilding,t=types[selectedType];if(!sb||!t)return;
+ const nl=Math.max(1,Math.min(35,parseInt(document.getElementById('fLevel').value)||1));
+ const sz=tailleNiveau(t,sb,nl);
+ if(sz){document.getElementById('fW').value=sz.w;document.getElementById('fH').value=sz.h;flash('Niveau '+nl+' : taille '+sz.w+'×'+sz.h+(sz.estimee?' (ESTIMÉE à partir du classeur : à vérifier)':' (connue)')+'. N\'oubliez pas « Enregistrer ».')}
+ else flash('Niveau '+nl+' : taille inconnue, à saisir dans Largeur/Hauteur.');
+});
 </script>
 <div id="saveBadge" style="display:none;position:fixed;left:8px;bottom:8px;z-index:60;color:#fff;font-size:12px;padding:4px 10px;border-radius:12px;pointer-events:none"></div>
 </body>
